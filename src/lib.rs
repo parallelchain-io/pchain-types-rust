@@ -25,8 +25,6 @@ pub mod exit_status;
 
 pub mod keypair;
 
-pub mod proofs;
-
 pub mod rpc;
 
 pub mod stake;
@@ -42,7 +40,6 @@ pub use constants::*;
 pub use crypto::*;
 pub use exit_status::*;
 pub use keypair::*;
-pub use proofs::*;
 pub use stake::*;
 pub use transaction::*;
 
