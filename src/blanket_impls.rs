@@ -3,43 +3,35 @@
     Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 */
 
-//! generic types implementation of traits [Serializable] and [Deserializable] for common data structures.
-//! 
-//! Currently supported common data stuctures include u32, u64, Vec<u8>, Vec<T>, bool, String, Option<T>, Tuples up tp 20 items.
 
 use crate::{Serializable, Deserializable};
 
-
 impl Serializable for u32 {}
-
 impl Deserializable for u32 {}
 
 impl Serializable for u64 {}
-
 impl Deserializable for u64 {}
 
 impl Serializable for Vec<u8> {}
-  
 impl Deserializable for Vec<u8> {}
 
 impl Serializable for bool {}
-  
 impl Deserializable for bool {}
 
 impl Serializable for String {}
-
 impl Deserializable for String {}
 
 impl<T: Serializable> Serializable for Option<T>{}
-
 impl<T: Deserializable> Deserializable for Option<T>{}
+
+impl<T: Serializable> Serializable for Vec<T> {}
+impl<T: Deserializable> Deserializable for Vec<T> {}
 
 impl<T1: Serializable> Serializable for (T1,) {}
 impl<T1: Deserializable> Deserializable for (T1,) {}
 
-impl<T: Serializable> Serializable for Vec<T> {}
-
-impl<T: Deserializable> Deserializable for Vec<T> {}
+impl<const N: usize> Serializable for [u8; N] {}
+impl<const N: usize> Deserializable for [u8; N] {}
 
 macro_rules! impl_tuple_serializable {
     ($($idx:tt $name:ident)+) => {
