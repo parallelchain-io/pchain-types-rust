@@ -9,20 +9,14 @@
 //! 
 //! run `cargo doc --open` to view rich documentation on the available types.
 
-pub mod serialization;
+pub mod cryptography;
 
 pub mod blockchain;
 
 pub mod replication;
 
-pub mod crypto;
-
 pub mod rpc;
 
 pub mod runtime;
 
-// Re-exports
-pub use serialization::*;
-pub use blockchain::*;
-pub use replication::*;
-pub use crypto::*;
+pub mod serialization;
