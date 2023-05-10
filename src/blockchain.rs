@@ -8,11 +8,11 @@
 use std::ops::Deref;
 use borsh::{BorshSerialize, BorshDeserialize};
 use crate::serialization::{Serializable, Deserializable};
-use crate::cryptography::{PublicAddress, Signature, Sha256Hash, BloomFilter};
+use crate::cryptography::{Keypair, PublicKey, PublicAddress, Signature, Signer, Verifier, Sha256Hash, BloomFilter, sha256};
 use crate::runtime::*;
 
 /// A data structure that describes and authorizes the execution of a batch of transactions (state transitions) on the blockchain.
-#[derive(Debug, BorshSerialize, BorshDeserialize, Clone)]
+#[derive(BorshSerialize, BorshDeserialize, Clone)]
 pub struct Block {
     /// Block header
     pub header : BlockHeader,
@@ -29,7 +29,7 @@ impl Serializable for Block {}
 impl Deserializable for Block {}
 
 /// Block header defines meta information of a block, including evidence for verifying validity of the block.
-#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, BorshSerialize, BorshDeserialize)]
 pub struct BlockHeader {
     /// Block hash of this block
     pub hash: Sha256Hash,
@@ -109,73 +109,73 @@ pub struct Transaction {
     pub hash: Sha256Hash,
 }
 
-impl Serializable for Transaction {}
-impl Deserializable for Transaction {}
-
 impl Transaction {
-    /// `to_signed` hashes and signs transactions and creates SignedTx which is a data structure suitable for submitting transactions 
-    ///  to the ParallelChain ecosystem.
-    /// ### Use of this method
-    /// 1. If signature is all zeros, it computes a new one with the existing hash in transaction
-    /// 2. If hash is all zeros, it computes a new one over the signature (after step 1).
-    pub fn to_signed(mut self, keypair: &[u8]) -> Result<SignedTx, CryptographicallyIncorrectTransactionError> {
+    pub fn new(signer: &Keypair, nonce: u64, commands: Vec<Command>, gas_limit: u64, max_base_fee_per_gas: u64, priority_fee_per_gas: u64) -> Transaction {
+        let mut transaction = Transaction {
+            signer: signer.public.to_bytes(),
+            nonce,
+            commands,
+            gas_limit,
+            max_base_fee_per_gas,
+            priority_fee_per_gas,
+            signature: [0u8; 64],
+            hash: [0u8; 32],
+        };
 
-        let keypair = keypair.as_keypair()
-            .map_err(|_|{CryptographicallyIncorrectTransactionError::InvalidKeypair})?;
+        let signature = signer.sign(&Serializable::serialize(&transaction));
+        transaction.signature = signature.into();
         
-        let serialized_transaction =  Transaction::serialize(&self);
-        
-        if self.signature == [0u8; 64] {
-            self.signature = keypair.sign(serialized_transaction.as_slice()).to_bytes();
-        }
+        let hash = sha256(ed25519_dalek::ed25519::signature::Signature::as_bytes(&signature));
+        transaction.hash = hash;
 
-        if self.hash == [0u8; 32] {
-            self.hash = crypto::sha256(&self.signature);
-        }
-
-        Ok(SignedTx(self))
+        transaction
     }
 
-    /// validated return transaction itself after validation of hash and signature
-    /// ### Example
-    /// ```no_run
-    /// let tx = Transaction::deserialize(&value).unwrap();
-    /// /// validated the transaction first before converting it to signed transaction
-    /// let signed_tx = tx.validated().unwrap().to_signed(keypair);
-    /// /// or converting it to "signed" transaction first. It is now optional to validate it.
-    /// let signed_tx = tx.to_signed(keypair).validated().unwrap();
-    /// ```
-    pub fn validated(self) -> Result<Self, CryptographicallyIncorrectTransactionError> {
-        self.is_cryptographically_correct()?;
-        Ok(self)
-    }
+    /// Check whether the Transaction's:
+    /// 1. Signer is a valid Ed25519 public key.
+    /// 2. Signature is a valid Ed25519 signature.
+    /// 3. Signature is produced by the signer over the intermediate transaction.
+    /// 4. Hash is the SHA256 hash over the signature.
+    pub fn is_cryptographically_correct(&self) -> Result<(), CryptographicallyIncorrectTransactionError> { 
+        // 1.
+        let public_key = PublicKey::from_bytes(&self.signer)
+            .map_err(|_| CryptographicallyIncorrectTransactionError::InvalidSigner)?;
 
-    /// Check whether the Transaction is hashed and signed correctly.
-    pub fn is_cryptographically_correct(&self) -> Result<(), CryptographicallyIncorrectTransactionError> {
-        // Verify the signature using the from_address (public key).
+        // 2.
+        let signature = ed25519_dalek::Signature::from_bytes(&self.signature)
+            .map_err(|_| CryptographicallyIncorrectTransactionError::InvalidSignature)?;
+
+        // 3.
         let signed_msg = {
             let intermediate_txn = Transaction {
-                hash: [0; 32],
-                signature: [0; 64],
+                signature: [0u8; 64],
+                hash: [0u8; 32],
                 ..self.to_owned()
             };
 
-            Transaction::serialize(&intermediate_txn)
+            Serializable::serialize(&intermediate_txn)
         };
-        let public_key = PublicKey::from_bytes(&self.signer)
-            .map_err(|_| CryptographicallyIncorrectTransactionError::InvalidFromAddress)?;
-        let signature = Signature::from_bytes(&self.signature)
-            .map_err(|_| CryptographicallyIncorrectTransactionError::InvalidSignature)?;
         public_key.verify(&signed_msg, &signature).map_err(|_| CryptographicallyIncorrectTransactionError::WrongSignature)?;
 
-        // Verify the hash over the signature.
-        if self.hash != crypto::sha256(signature.to_bytes().as_slice()) {
+        // 4.
+        if self.hash != sha256(ed25519_dalek::ed25519::signature::Signature::as_bytes(&signature)) {
             return Err(CryptographicallyIncorrectTransactionError::WrongHash)
         }
         
         Ok(())
     }
 }
+
+pub enum CryptographicallyIncorrectTransactionError {
+    InvalidSigner,
+    InvalidSignature,
+    WrongSignature,
+    WrongHash,
+}
+
+impl Serializable for Transaction {}
+impl Deserializable for Transaction {}
+
 
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum Command {
@@ -252,12 +252,12 @@ impl Deserializable for ExitStatus {}
 /// SignedTx is a data structure utlized in generating 
 /// signed [Transaction] for submission to ParallelChain.
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
-pub struct SignedTx(Transaction);
+pub struct SignedTransaction(Transaction);
 
-impl Serializable for SignedTx {}
-impl Deserializable for SignedTx {}
+impl Serializable for SignedTransaction {}
+impl Deserializable for SignedTransaction {}
 
-impl Deref for SignedTx {
+impl Deref for SignedTransaction {
     type Target = Transaction;
 
     fn deref(&self) -> &Self::Target {
@@ -265,8 +265,8 @@ impl Deref for SignedTx {
     }
 }
 
-impl From<SignedTx> for Transaction {
-    fn from(signed_tx: SignedTx) -> Self {
+impl From<SignedTransaction> for Transaction {
+    fn from(signed_tx: SignedTransaction) -> Self {
         signed_tx.0
     }
 }

@@ -21,8 +21,8 @@ base64 = "0.13"
 borsh = "=0.10.2"
 ed25519-dalek = "1.0.1"
 hotstuff_rs = { git = "https://github.com/parallelchain-io/hotstuff_rs" }
-rand = { version = "0.7", optional = true }
-rand_chacha = { version = "0.2", optional = true }
+rand = "0.7"
+rand_chacha = "0.2"
 rs_merkle = "1.1"
 sha2 = "0.10"
 

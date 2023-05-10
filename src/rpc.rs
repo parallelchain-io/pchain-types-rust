@@ -82,7 +82,7 @@ pub struct BlockRequest {
     pub block_hash: CryptoHash
 }
 
-#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, BorshSerialize, BorshDeserialize)]
 pub struct BlockResponse {
     pub block: Option<Block>,
 }
@@ -93,7 +93,7 @@ pub struct BlockHeaderRequest {
     pub block_hash: CryptoHash
 }
 
-#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+#[derive(Clone, BorshSerialize, BorshDeserialize)]
 pub struct BlockHeaderResponse {
     pub block_header: Option<BlockHeader>,
 }

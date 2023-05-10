@@ -6,7 +6,12 @@
 use rs_merkle::{MerkleTree, algorithms::Sha256};
 use crate::serialization::Serializable;
 
+pub use ed25519_dalek::Signer;
+pub use ed25519_dalek::Verifier;
+
 pub type Keypair = ed25519_dalek::Keypair;
+
+pub type PublicKey = ed25519_dalek::PublicKey;
 
 /// PublicAddress is either:
 /// - an Ed25519 public key representing an external account, or
