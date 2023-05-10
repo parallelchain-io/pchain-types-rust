@@ -1,28 +1,32 @@
 # ParallelChain Types (Rust)
 
+Rust implementations of the data types defined in the [ParallelChain Protocol](https://github.com/parallelchain-io/parallelchain-protocol), including transactions, blocks, cryptographic primitives, and RPC requests and responses.
 
+Read the docs at: [docs.rs](https://docs.rs/pchain-types/0.4.2/pchain_types/)
 
-## Types
+## Modules
 
-TODO: the organization reflects the specification.
+- [Cryptography](https://docs.rs/pchain-types/0.4.2/pchain_types/cryptography): cryptographic primitives like keypairs and SHA256 hashes.
+- [Blockchain](https://docs.rs/pchain-types/0.4.2/pchain_types/blockchain): types which appear in blocks like transactions and receipts, and also blocks themselves.
+- [Runtime](https://docs.rs/pchain-types/0.4.2/pchain_types/runtime): inputs of transaction commands as structures.
+- [RPC](https://docs.rs/pchain-types/0.4.2/pchain_types/rpc): RPC requests and responses, and the additional types included in them.
+- [Serialization](https://docs.rs/pchain-types/0.4.2/pchain_types/serialization): traits for deterministic serialization of protocol-defined types. 
 
-- Blockchain
-  - Keypair
-  - Private Key
-  - Public Key
-  - Public Address
-  - Block
-  - Block Header
-  - Transaction
-  - Receipt
-  - Exit Code
-  - Log
-  - Vote
-  - Quorum Certificate
-- Runtime
-  - Command
-  - Command inputs.
-- RPC
-  - RPC request and response structures (e.g., TransactionRequest, TransactionResponse).
-  - DPoS-related types (e.g., ValidatorSet, PoolWithDelegators).
+## Common use cases
 
+- Generating a keypair.
+- Creating and signing a transaction.
+- Creating RPC requests, and interpreting responses.
+
+## Versioning
+
+The version of this library reflects the version of the ParallelChain Protocol which it implements. For example, the current version is 0.4.2, and this implements protocol version 0.4. Patch version increases are not guaranteed to be non-breaking.
+
+## Opening an issue
+
+Open an issue in GitHub if you:
+1. Have a feature request / feature idea,
+2. Have any questions (particularly software related questions),
+3. Think you may have discovered a bug.
+
+Please try to label your issues appropriately.

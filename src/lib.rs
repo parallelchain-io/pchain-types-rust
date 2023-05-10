@@ -3,11 +3,17 @@
     Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 */
 
-//! ParallelChain F Protocol Types (pchain-types) defines data structures prescribed by the ParallelChain F Blockchain Protocol. 
-//! These definitions help Web Applications, clients, and differing implementations of 'Node' software developed by different groups 
-//! communicate with each other and exhibit correct, protocol-specified semantics and behavior.
+//! Rust implementations of the data types defined in the
+//! [ParallelChain Protocol](https://github.com/parallelchain-io/parallelchain-protocol), including
+//! transactions, blocks, cryptographic primitives, and RPC requests and responses.
 //! 
-//! run `cargo doc --open` to view rich documentation on the available types.
+//! ## Organization
+//!
+//! The organization of this library into modules mirror the organization of the protocol specification
+//! into chapters. For example, transactions, which are specified in the "Blockchain" chapter of the
+//! [specification](https://github.com/parallelchain-io/parallelchain-protocol/blob/master/Blockchain.md#transaction),
+//! are defined in the blockchain module of this [library](blockchain::Transaction). The exception are the cryptographic
+//! primitives specified in the Blockchain chapter, which are here defined in its own module.
 
 pub mod cryptography;
 

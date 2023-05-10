@@ -3,12 +3,12 @@
     Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 */
 
-//! block defines block-related protocol types
+//! Types which appear in blocks like [transactions](Transaction) and [receipts](Receipt), and also [blocks](Block) themselves.
 
 use std::ops::Deref;
 use borsh::{BorshSerialize, BorshDeserialize};
 use crate::serialization::{Serializable, Deserializable};
-use crate::cryptography::{Keypair, PublicKey, PublicAddress, Signature, Signer, Verifier, Sha256Hash, BloomFilter, sha256};
+use crate::cryptography::{Keypair, PublicKey, PublicAddress, SignatureBytes, Signer, Verifier, Sha256Hash, BloomFilter, sha256};
 use crate::runtime::*;
 
 /// A data structure that describes and authorizes the execution of a batch of transactions (state transitions) on the blockchain.
@@ -103,7 +103,7 @@ pub struct Transaction {
     pub priority_fee_per_gas: u64,
 
     /// the signature formed by signing over content of this transaction by using the signer’s private key
-    pub signature: Signature,
+    pub signature: SignatureBytes,
 
     /// The cryptographic hash of signature
     pub hash: Sha256Hash,

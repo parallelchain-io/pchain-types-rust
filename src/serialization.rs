@@ -4,7 +4,8 @@
 */
 
 
-/// Serializable encapsulates implementation of serialization on data structures that are defined in pchain-types.
+//! Traits for deterministic serialization of protocol-defined types. 
+
 pub trait Serializable: borsh::BorshSerialize {
     fn serialize(&self) -> Vec<u8> {
         self.try_to_vec().unwrap()
