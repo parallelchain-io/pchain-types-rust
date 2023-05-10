@@ -17,8 +17,6 @@ pub mod replication;
 
 pub mod crypto;
 
-pub mod keypair;
-
 pub mod rpc;
 
 pub mod runtime;
@@ -28,4 +26,3 @@ pub use serialization::*;
 pub use blockchain::*;
 pub use replication::*;
 pub use crypto::*;
-pub use keypair::*;
