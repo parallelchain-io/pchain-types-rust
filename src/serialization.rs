@@ -4,7 +4,19 @@
 */
 
 
-use crate::{Serializable, Deserializable};
+/// Serializable encapsulates implementation of serialization on data structures that are defined in pchain-types.
+pub trait Serializable: borsh::BorshSerialize {
+    fn serialize(&self) -> Vec<u8> {
+        self.try_to_vec().unwrap()
+    }
+}
+
+/// Deserializable encapsulates implementation of deserialization on data structures that are defined in pchain-types.
+pub trait Deserializable: borsh::BorshDeserialize {
+    fn deserialize(args: &[u8]) -> Result<Self, std::io::Error> {
+        Self::try_from_slice(args)
+    }
+}
 
 impl Serializable for u32 {}
 impl Deserializable for u32 {}

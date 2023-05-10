@@ -7,10 +7,8 @@
 //! for example, implementing the trait [Debug], [Serializable] and [Deserializable].
 
 use std::ops::{Deref, DerefMut};
-
 use borsh::{BorshSerialize, BorshDeserialize};
 use hotstuff_rs::types::{ChainID, CryptoHash};
-
 use crate::{Serializable, Deserializable};
 
 pub type ViewNumber = hotstuff_rs::types::ViewNumber;
