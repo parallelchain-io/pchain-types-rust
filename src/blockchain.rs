@@ -77,8 +77,15 @@ pub struct BlockHeader {
 impl Serializable for BlockHeader {}
 impl Deserializable for BlockHeader {}
 
-/// Transactions are digitally signed instructions that tell 
-/// the Mainnet state machine to execute a sequence of ‘commands’. 
+/// Digitally signed instructions that tell the ParallelChain state machine to execute a sequence of [commands](Command). 
+/// 
+/// ## Creating a Transaction
+/// 
+/// There are two ways of creating an instance of transaction:
+/// 1. Using the [constructor function](Transaction::new): this takes in the user-provided fields of a transaction and
+///    computes its signature and hash automatically.
+/// 2. Using a struct expression (i.e., `Transaction { signer: ..., }`): this does not check the signature and hash 
+///    fields.
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct Transaction {
     /// The public address of the external account which signed this transaction
@@ -248,25 +255,3 @@ pub enum ExitStatus {
 
 impl Serializable for ExitStatus {}
 impl Deserializable for ExitStatus {}
-
-/// SignedTx is a data structure utlized in generating 
-/// signed [Transaction] for submission to ParallelChain.
-#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
-pub struct SignedTransaction(Transaction);
-
-impl Serializable for SignedTransaction {}
-impl Deserializable for SignedTransaction {}
-
-impl Deref for SignedTransaction {
-    type Target = Transaction;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl From<SignedTransaction> for Transaction {
-    fn from(signed_tx: SignedTransaction) -> Self {
-        signed_tx.0
-    }
-}

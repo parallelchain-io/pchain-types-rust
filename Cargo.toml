@@ -1,11 +1,11 @@
 [package]
 name = "pchain-types"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["ParallelChain Lab <info@parallelchain.io>"]
 edition = "2018"
-description = "Types prescribed in the ParallelChain F Blockchain Protocol"
+description = "Data types defined in the ParallelChain Protocol"
 license = "Apache-2.0"
-repository = "https://github.com/parallelchain-io/parallelchain-protocol-types"
+repository = "https://github.com/parallelchain-io/pchain-types-rust"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -17,12 +17,8 @@ hex = "0.4.3"
 rand = "0.7"
 
 [dependencies]
-base64 = "0.13"
 borsh = "=0.10.2"
 ed25519-dalek = "1.0.1"
-hotstuff_rs = { git = "https://github.com/parallelchain-io/hotstuff_rs" }
+hotstuff_rs = { version = "0.2", git = "https://github.com/parallelchain-io/hotstuff_rs" }
 rs_merkle = "1.1"
 sha2 = "0.10"
-
-[features]
-default = []

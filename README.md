@@ -1,6 +1,6 @@
 # ParallelChain Types (Rust)
 
-Rust implementations of the data types defined in the [ParallelChain Protocol](https://github.com/parallelchain-io/parallelchain-protocol), including transactions, blocks, cryptographic primitives, and RPC requests and responses.
+Rust implementation of the data types defined in the [ParallelChain Protocol](https://github.com/parallelchain-io/parallelchain-protocol), including transactions, blocks, cryptographic primitives, and RPC requests and responses.
 
 Read the docs at: [docs.rs](https://docs.rs/pchain-types/0.4.2/pchain_types/)
 
@@ -14,9 +14,9 @@ Read the docs at: [docs.rs](https://docs.rs/pchain-types/0.4.2/pchain_types/)
 
 ## Common use cases
 
-- Generating a keypair.
-- Creating and signing a transaction.
-- Creating RPC requests, and interpreting responses.
+- Generating a keypair: (https://docs.rs/pchain-types/0.4.2/pchain_types/cryptography/index.html#generating-a-keypair)
+- Creating and signing a transaction: (https://docs.rs/pchain-types/0.4.2/pchain-types/blockchain/struct.Transaction.html#creating-a-transaction).
+- Creating RPC requests: [RPC](https://docs.rs/pchain-types/0.4.2/pchain_types/rpc).
 
 ## Versioning
 
