@@ -21,8 +21,6 @@ pub mod keypair;
 
 pub mod rpc;
 
-pub mod stake;
-
 pub mod runtime;
 
 // Re-exports
@@ -31,4 +29,3 @@ pub use blockchain::*;
 pub use replication::*;
 pub use crypto::*;
 pub use keypair::*;
-pub use stake::*;
