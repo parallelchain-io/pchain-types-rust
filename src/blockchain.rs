@@ -5,10 +5,14 @@
 
 //! block defines block-related protocol types
 
-use crate::{crypto, PublicAddress, Transaction, Receipt, Serializable, Deserializable};
+use std::ops::Deref;
+use borsh::{BorshSerialize, BorshDeserialize};
+use crate::serialization::{Serializable, Deserializable};
+use crate::cryptography::{PublicAddress, Signature, Sha256Hash, BloomFilter};
+use crate::runtime::*;
 
 /// A data structure that describes and authorizes the execution of a batch of transactions (state transitions) on the blockchain.
-#[derive(borsh::BorshSerialize, borsh::BorshDeserialize, Clone)]
+#[derive(Debug, BorshSerialize, BorshDeserialize, Clone)]
 pub struct Block {
     /// Block header
     pub header : BlockHeader,
@@ -25,10 +29,10 @@ impl Serializable for Block {}
 impl Deserializable for Block {}
 
 /// Block header defines meta information of a block, including evidence for verifying validity of the block.
-#[derive(Clone, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct BlockHeader {
     /// Block hash of this block
-    pub hash: crypto::Sha256Hash,
+    pub hash: Sha256Hash,
 
     /// The number of Justify-links between this Block and the Genesis Block. 0 for the Genesis Block
     pub height: u64, 
@@ -57,17 +61,17 @@ pub struct BlockHeader {
     pub gas_used: u64,
 
     /// Transactions Hash, the Binary Merkle Tree root hash over the Block’s Transactions
-    pub txs_hash: crypto::Sha256Hash,
+    pub txs_hash: Sha256Hash,
 
     /// Receipts Hash, the Binary Merkle Tree root hash over the Block’s Receipts
-    pub receipts_hash: crypto::Sha256Hash,
+    pub receipts_hash: Sha256Hash,
 
     /// State Hash, the SHA256 root hash of the blockchain’s World State Merkle Patricia 
     /// Trie (MPT) after executing all of this Block’s Transactions
-    pub state_hash: crypto::Sha256Hash,
+    pub state_hash: Sha256Hash,
 
     /// Log Bloom, the 256-byte Block-level Bloom Filter union of all the Bloom Filters of each Log topic from the Block’s Receipts
-    pub log_bloom: crypto::BloomFilter,
+    pub log_bloom: BloomFilter,
 }
 
 impl Serializable for BlockHeader {}
@@ -75,27 +79,34 @@ impl Deserializable for BlockHeader {}
 
 /// Transactions are digitally signed instructions that tell 
 /// the Mainnet state machine to execute a sequence of ‘commands’. 
-#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct Transaction {
     /// The public address of the external account which signed this transaction
-    pub signer: crypto::PublicAddress,
+    pub signer: PublicAddress,
+
     /// The number of transactions signed by the signer that have been included on 
     /// the blockchain before this transaction. This ensures that all of the signer’s transactions are
     /// included in the blockchain in an expected order, and prevents the same transaction from
     /// being included in multiple blocks.
     pub nonce: u64,
+
     /// A list of execution commands that triggers a sequence of state transitions
     pub commands: Vec<Command>,
+
     /// The maximum number of gas units (ref.) that should be used in executing this transaction
     pub gas_limit: u64,
+
     /// The maximum number of grays that the signer is willing to burn for a gas unit used in this transaction
     pub max_base_fee_per_gas: u64,
+
     /// the number of grays that the signer is willing to pay the block proposer for including this transaction in a block
     pub priority_fee_per_gas: u64,
+
     /// the signature formed by signing over content of this transaction by using the signer’s private key
-    pub signature: crypto::Signature,
+    pub signature: Signature,
+
     /// The cryptographic hash of signature
-    pub hash: crypto::Sha256Hash,
+    pub hash: Sha256Hash,
 }
 
 impl Serializable for Transaction {}
@@ -166,10 +177,30 @@ impl Transaction {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub enum Command {
+    Transfer(TransferInput),
+    Deploy(DeployInput),
+    Call(CallInput),
+    CreatePool(CreatePoolInput),
+    SetPoolSettings(SetPoolSettingsInput),
+    DeletePool,
+    CreateDeposit(CreateDepositInput),
+    SetDepositSettings(SetDepositSettingsInput),
+    TopUpDeposit(TopUpDepositInput),
+    WithdrawDeposit(WithdrawDepositInput),
+    StakeDeposit(StakeDepositInput),
+    UnstakeDeposit(UnstakeDepositInput),
+    NextEpoch,
+}
+
+impl Serializable for Command {}
+impl Deserializable for Command {}
+
 /// Log are messages produced by smart contract executions that are persisted on the blockchain
 /// in a cryptographically-provable way. Log produced by transactions that call smart contracts
 /// are stored in the `logs` field of a Block in the order in which they are emitted.
-#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct Log { 
     /// Key of this event. It is created from contract execution.
     pub topic: Vec<u8>,
@@ -184,7 +215,7 @@ impl Deserializable for Log {}
 pub type Receipt = Vec<CommandReceipt>;
 
 /// A CommandReceipt summarizes the result of execution of a [Command].
-#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct CommandReceipt {
     /// Exit status tells whether the corresponding command in the sequence
     /// succeeded in doing its operation, and, if it failed, whether the 
@@ -203,7 +234,7 @@ impl Serializable for CommandReceipt {}
 impl Deserializable for CommandReceipt {}
 
 /// ExitStatus defines the success and error types of receipt.
-#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum ExitStatus {
     /// The Transaction successfully accomplished everything that it could have been expected to do.
     Success,
@@ -220,7 +251,7 @@ impl Deserializable for ExitStatus {}
 
 /// SignedTx is a data structure utlized in generating 
 /// signed [Transaction] for submission to ParallelChain.
-#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct SignedTx(Transaction);
 
 impl Serializable for SignedTx {}

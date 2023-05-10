@@ -10,8 +10,7 @@ use std::ops::{Deref, DerefMut};
 
 use borsh::{BorshSerialize, BorshDeserialize};
 use hotstuff_rs::types::{ChainID, CryptoHash};
-
-use crate::{Serializable, Deserializable};
+use crate::serialization::{Serializable, Deserializable};
 
 pub type ViewNumber = hotstuff_rs::types::ViewNumber;
 

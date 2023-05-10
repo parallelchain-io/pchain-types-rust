@@ -28,4 +28,3 @@ sha2 = "0.10"
 
 [features]
 default = []
-keygen = ["dep:rand", "dep:rand_chacha"]
