@@ -6,6 +6,8 @@ edition = "2018"
 description = "Data types defined in the ParallelChain Protocol"
 license = "Apache-2.0"
 repository = "https://github.com/parallelchain-io/pchain-types-rust"
+keywords = ["blockchain", "parallelchain", "crypto", "client", "library"]
+categories = ["cryptography::cryptocurrencies"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
