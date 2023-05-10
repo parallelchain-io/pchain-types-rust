@@ -9,17 +9,13 @@
 //! 
 //! run `cargo doc --open` to view rich documentation on the available types.
 
-pub mod base64url;
-
 pub mod serialization;
 
-pub mod block;
+pub mod blockchain;
 
-pub mod consensus;
+pub mod replication;
 
 pub mod crypto;
-
-pub mod exit_status;
 
 pub mod keypair;
 
@@ -27,15 +23,12 @@ pub mod rpc;
 
 pub mod stake;
 
-pub mod transaction; 
+pub mod runtime;
 
 // Re-exports
-pub use base64url::*;
 pub use serialization::*;
-pub use block::*;
-pub use consensus::*;
+pub use blockchain::*;
+pub use replication::*;
 pub use crypto::*;
-pub use exit_status::*;
 pub use keypair::*;
 pub use stake::*;
-pub use transaction::*;

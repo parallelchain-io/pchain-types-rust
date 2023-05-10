@@ -21,8 +21,13 @@ pub type PublicAddress = [u8; 32];
 /// A SHA256 hash. Used as block and transaction hashes, as well as to form Merkle tries.
 pub type Sha256Hash = [u8; 32];
 
-/// A space-efficient probabilistic data structure
-pub type BloomFilter = [u8; 256];
+/// Compute a Sha256 hash.
+pub fn sha256(data: &[u8]) -> Sha256Hash {
+    use sha2::{Sha256, Digest};
+    let mut ret = Sha256::new();
+    ret.update(data);
+    ret.finalize().into()
+}
 
 // Computes the Merkle root hash of a vector of serializable data.
 pub fn merkle_root<B: Serializable>(data: &Vec<B>) -> Sha256Hash {
@@ -45,15 +50,6 @@ pub fn merkle_root<B: Serializable>(data: &Vec<B>) -> Sha256Hash {
     merkle_tree.root().unwrap()
 }
 
-/// Compute a Sha256 hash.
-pub fn sha256(data: &[u8]) -> Sha256Hash {
-    use sha2::{Sha256, Digest};
-    let mut ret = Sha256::new();
-    ret.update(data);
-    ret.finalize().into()
-}
-
-
 pub trait AsKeyPair {
     fn as_keypair(&self) -> Result<ed25519_dalek::Keypair, CryptographicallyIncorrectTransactionError>;
 }
@@ -63,6 +59,9 @@ impl AsKeyPair for [u8] {
         ed25519_dalek::Keypair::from_bytes(self).map_err(|_| {CryptographicallyIncorrectTransactionError::InvalidKeypair})
     }
 }
+
+/// A space-efficient probabilistic data structure
+pub type BloomFilter = [u8; 256];
 
 #[derive(Debug)]
 pub enum CryptographicallyIncorrectTransactionError {

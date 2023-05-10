@@ -3,12 +3,75 @@
     Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 */
 
-//! The data structures relevant to Transactions.
+//! block defines block-related protocol types
 
-use std::ops::Deref;
+use crate::{crypto, PublicAddress, Transaction, Receipt, Serializable, Deserializable};
 
-use ed25519_dalek::{PublicKey, Signature, Signer, Verifier};
-use crate::{crypto, Serializable, Deserializable, CryptographicallyIncorrectTransactionError, AsKeyPair, PublicAddress, ExitStatus};
+/// A data structure that describes and authorizes the execution of a batch of transactions (state transitions) on the blockchain.
+#[derive(borsh::BorshSerialize, borsh::BorshDeserialize, Clone)]
+pub struct Block {
+    /// Block header
+    pub header : BlockHeader,
+
+    /// A dynamically sized list of Transactions
+    pub transactions : Vec<Transaction>,
+
+    /// A dynamically sized list of Receipts. If a Block contains a Transaction,
+    /// it must also contain its Receipt. Receipts appear in the order of their Transactions.
+    pub receipts : Vec<Receipt>,
+}
+
+impl Serializable for Block {}
+impl Deserializable for Block {}
+
+/// Block header defines meta information of a block, including evidence for verifying validity of the block.
+#[derive(Clone, borsh::BorshSerialize, borsh::BorshDeserialize)]
+pub struct BlockHeader {
+    /// Block hash of this block
+    pub hash: crypto::Sha256Hash,
+
+    /// The number of Justify-links between this Block and the Genesis Block. 0 for the Genesis Block
+    pub height: u64, 
+
+    /// A QuorumCertificate that points to the Block’s parent
+    pub justify: hotstuff_rs::types::QuorumCertificate,
+
+    /// The SHA256 Hash over content inside the block header
+    pub data_hash: hotstuff_rs::types::CryptoHash,
+
+    /// A number unique to a particular ParallelChain Mainnet-based blockchain. This
+    /// prevents, for example, Blocks from one chain from being published in another chain as evidence
+    /// of malfeasance.
+    pub chain_id: hotstuff_rs::types::ChainID,
+
+    /// The Public Address of the Validator that is the Leader of the View this Block was proposed in
+    pub proposer: PublicAddress,
+
+    /// A Unix timestamp
+    pub timestamp: u32,
+
+    /// The (inclusive) minimum number of Grays that a Transaction included in this Block must pay for every Gas used.
+    pub base_fee: u64,
+
+    /// The total gas used for producing the block.
+    pub gas_used: u64,
+
+    /// Transactions Hash, the Binary Merkle Tree root hash over the Block’s Transactions
+    pub txs_hash: crypto::Sha256Hash,
+
+    /// Receipts Hash, the Binary Merkle Tree root hash over the Block’s Receipts
+    pub receipts_hash: crypto::Sha256Hash,
+
+    /// State Hash, the SHA256 root hash of the blockchain’s World State Merkle Patricia 
+    /// Trie (MPT) after executing all of this Block’s Transactions
+    pub state_hash: crypto::Sha256Hash,
+
+    /// Log Bloom, the 256-byte Block-level Bloom Filter union of all the Bloom Filters of each Log topic from the Block’s Receipts
+    pub log_bloom: crypto::BloomFilter,
+}
+
+impl Serializable for BlockHeader {}
+impl Deserializable for BlockHeader {}
 
 /// Transactions are digitally signed instructions that tell 
 /// the Mainnet state machine to execute a sequence of ‘commands’. 
@@ -103,108 +166,6 @@ impl Transaction {
     }
 }
 
-/// Command is the Transaction Kind that define how state mahcine transits.
-#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
-pub enum Command {
-    /// Transfer Balance from transaction signer to recipient.
-    Transfer {
-        /// Recipient of the transfer
-        recipient: PublicAddress,
-        /// The amount to transfer
-        amount: u64
-    },
-    /// Deploy smart contract to the state of the blockchain.
-    Deploy{
-        /// Smart contract in format of WASM bytecode
-        contract: Vec<u8>,
-        /// Version of Contract Binary Interface
-        cbi_version: u32
-    },
-    /// Trigger method call of a deployed smart contract.
-    Call{
-        /// The address of the target contract
-        target: PublicAddress,
-        /// The method to be invoked
-        method: String,
-        /// The arguments supplied to the invoked method. It is a list of serialized method arguments (see [Serializable])
-        arguments: Option<Vec<Vec<u8>>>,
-        /// The amount sent to the target contract. The invoked contract can check the received amount 
-        /// by host function `amount()` according to the CBI.
-        amount: Option<u64>
-    },
-    /// Instantiation of a Pool in state
-    CreatePool {
-        /// Commission rate (in unit of percentage) is the portion that 
-        /// the owners of its delegated stakes should pay from the reward in an epoch transaction.
-        commission_rate: u8
-    },
-    /// Update settings of an existing Pool.
-    SetPoolSettings {
-        /// Commission rate (in unit of percentage) is the portion that 
-        /// the owners of its delegated stakes should pay from the reward in an epoch transaction.
-        commission_rate: u8,
-    },
-    /// Delete an existing Pool in state.
-    DeletePool,
-    /// Instantiation of a Pool in state
-    CreateDeposit {
-        /// The address of operator of the target pool
-        operator: PublicAddress,
-        /// The deposit amount
-        balance: u64,
-        /// Flag to indicate whether the received reward in epoch transaction should be automatically
-        /// staked to the pool
-        auto_stake_rewards: bool,
-    },
-    /// Update settings of an existing Deposit.
-    SetDepositSettings {
-        /// The address of operator of the target pool
-        operator: PublicAddress,
-        /// Flag to indicate whether the received reward in epoch transaction should be automatically
-        /// staked to the pool
-        auto_stake_rewards: bool,
-    },
-    /// Increase balance of an existing Deposit.
-    TopUpDeposit {
-        /// The address of operator of the target pool
-        operator: PublicAddress,
-        /// The amount added to Deposit's Balance
-        amount: u64,
-    },
-    /// Withdraw balance from an existing Deposit.
-    WithdrawDeposit {
-        /// The address of operator of the target pool
-        operator: PublicAddress,
-        /// The amount of deposits that the stake owner wants to withdraw. The prefix 'max'
-        /// is denoted here because the actual withdrawal amount can be less than 
-        /// the wanted amount.
-        max_amount: u64,
-    },
-    /// Increase stakes to an existing Pool
-    StakeDeposit {
-        /// The address of operator of the target pool
-        operator: PublicAddress,
-        /// The amount of stakes that the stake owner wants to stake to the target pool. 
-        /// The prefix 'max' is denoted here because the actual amount to be staked
-        /// can be less than the wanted amount.
-        max_amount: u64,
-    },
-    /// Remove stakes from an existing Pool.
-    UnstakeDeposit {
-        /// The address of operator of the target pool
-        operator: PublicAddress,
-        /// The amount of stakes that the stake owner wants to remove from the target pool. 
-        /// The prefix 'max' is denoted here because the actual amount to be removed
-        /// can be less than the wanted amount.
-        max_amount: u64,
-    },
-    /// Administration Command: proceed to next epoch.
-    NextEpoch,
-}
-
-impl Serializable for Command {}
-impl Deserializable for Command {}
-
 /// Log are messages produced by smart contract executions that are persisted on the blockchain
 /// in a cryptographically-provable way. Log produced by transactions that call smart contracts
 /// are stored in the `logs` field of a Block in the order in which they are emitted.
@@ -240,6 +201,22 @@ pub struct CommandReceipt {
 
 impl Serializable for CommandReceipt {}
 impl Deserializable for CommandReceipt {}
+
+/// ExitStatus defines the success and error types of receipt.
+#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+pub enum ExitStatus {
+    /// The Transaction successfully accomplished everything that it could have been expected to do.
+    Success,
+
+    /// The Transaction failed to accomplish the primary operation that Transactions of its kinds are expected to accomplish.
+    Failed,
+
+    /// The Gas Limit was exceeded by a dynamically costed activity in a dynamic-cost Transaction.
+    GasExhausted,
+}
+
+impl Serializable for ExitStatus {}
+impl Deserializable for ExitStatus {}
 
 /// SignedTx is a data structure utlized in generating 
 /// signed [Transaction] for submission to ParallelChain.
