@@ -49,7 +49,7 @@ pub use ed25519_dalek::Verifier;
 /// - a contract address.
 pub type PublicAddress = [u8; 32];
 
-fn contract_address(signer: &PublicAddress, nonce: u64) -> PublicAddress {
+pub fn contract_address(signer: &PublicAddress, nonce: u64) -> PublicAddress {
     let mut hasher = Sha256::new();
     let mut pre_image = Vec::new();
     pre_image.extend(signer);
@@ -70,7 +70,7 @@ pub fn sha256<T: AsRef<[u8]>>(data: T) -> Sha256Hash {
     ret.finalize().into()
 }
 
-// Compute the Binary Merkle Tree root hash over a list of arbitrary data, e.g., [crate::blockchain::Transaction](transactions) or [crate::blockchain::Receipt](receipts).
+/// Compute the Binary Merkle Tree root hash over a list of arbitrary data, e.g., [crate::blockchain::Transaction](transactions) or [crate::blockchain::Receipt](receipts).
 pub fn merkle_root<O: AsRef<[I]>, I: AsRef<[u8]>>(data: O) -> Sha256Hash {
     // null hash really isn't all 0s. There is no hash value for a tree without root. But here 
     // we use the 32-byte hash values to fill in the field definition inside data structures, for example, block header.
