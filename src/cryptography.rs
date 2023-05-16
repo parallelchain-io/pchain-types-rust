@@ -18,7 +18,8 @@
 //! ```
 
 
-use rs_merkle::{MerkleTree, algorithms::Sha256};
+use sha2::{Sha256, Digest};
+use rs_merkle::{MerkleTree, algorithms};
 
 /// An Ed25519 keypair.
 pub type Keypair = ed25519_dalek::Keypair;
@@ -48,12 +49,22 @@ pub use ed25519_dalek::Verifier;
 /// - a contract address.
 pub type PublicAddress = [u8; 32];
 
+fn contract_address(signer: &PublicAddress, nonce: u64) -> PublicAddress {
+    let mut hasher = Sha256::new();
+    let mut pre_image = Vec::new();
+    pre_image.extend(signer);
+    pre_image.extend(nonce.to_le_bytes().to_vec());
+
+    hasher.update(pre_image);
+
+    hasher.finalize().into()
+}
+
 /// A SHA256 hash over some message.
 pub type Sha256Hash = [u8; 32];
 
 /// Compute the SHA256 hash over some data.
 pub fn sha256<T: AsRef<[u8]>>(data: T) -> Sha256Hash {
-    use sha2::{Sha256, Digest};
     let mut ret = Sha256::new();
     ret.update(data);
     ret.finalize().into()
@@ -73,7 +84,7 @@ pub fn merkle_root<O: AsRef<[I]>, I: AsRef<[u8]>>(data: O) -> Sha256Hash {
         .map(sha256)
         .collect();
 
-    let merkle_tree = MerkleTree::<Sha256>::from_leaves(&prehashed_leaves);
+    let merkle_tree = MerkleTree::<algorithms::Sha256>::from_leaves(&prehashed_leaves);
     merkle_tree.root().unwrap()
 }
 
