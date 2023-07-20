@@ -90,3 +90,45 @@ pub fn merkle_root<O: AsRef<[I]>, I: AsRef<[u8]>>(data: O) -> Sha256Hash {
 
 /// A 256-bit Bloom Filter.
 pub type BloomFilter = [u8; 256];
+
+#[cfg(test)]
+mod test {
+    use sha2::{Sha256, Digest};
+    use crate::cryptography::contract_address;
+    use super::{PublicAddress, merkle_root};
+
+    #[test]
+    fn compute_contract_address() {
+        let public_key: PublicAddress = [79, 219, 143, 101, 101, 30, 7, 240, 226, 225, 53, 61, 92, 149, 233, 23, 2, 91, 251, 246, 191, 245, 83, 59, 53, 40, 126, 239, 84, 133, 130, 30];
+        let nonce: u64 = 100;
+
+        let bytes = [79, 219, 143, 101, 101, 30, 7, 240, 226, 225, 53, 61, 92, 149, 233, 23, 2, 91, 251, 246, 191, 245, 83, 59, 53, 40, 126, 239, 84, 133, 130, 30, 100, 0, 0, 0, 0, 0, 0, 0];
+        let addr: PublicAddress = {
+            let mut hasher = Sha256::new();
+            hasher.update(bytes);
+            hasher.finalize().into()
+        };
+
+        assert_eq!(addr, contract_address(&public_key, nonce));
+
+        // check the result of same address with different nonce
+        assert_ne!(contract_address(&public_key, nonce), contract_address(&public_key, nonce + 1));
+    }
+
+    #[test]
+    fn compute_empty_data_merkle_root() {
+        let elements: Vec<[u8;1]> = vec![];
+        let root = merkle_root(elements);
+        assert_eq!(root, [0;32]);
+    }
+
+    #[test]
+    fn compute_non_empty_data_merkle_root() {
+        let elements = [b"a", b"b", b"c", b"d", b"e", b"f"];
+        let root = merkle_root(&elements);
+        assert_eq!(
+            rs_merkle::utils::collections::to_hex_string(&root),
+            "1f7379539707bcaea00564168d1d4d626b09b73f8a2a365234c62d763f854da2".to_string()
+        );
+    }
+}
