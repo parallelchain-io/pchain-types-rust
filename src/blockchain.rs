@@ -172,6 +172,7 @@ impl Transaction {
     }
 }
 
+#[derive(Debug)]
 pub enum CryptographicallyIncorrectTransactionError {
     InvalidSigner,
     InvalidSignature,
@@ -254,3 +255,99 @@ pub enum ExitStatus {
 
 impl Serializable for ExitStatus {}
 impl Deserializable for ExitStatus {}
+
+
+#[cfg(test)]
+mod test {
+    use rand::rngs::OsRng;
+    use ed25519_dalek::Keypair;
+
+    use crate::{runtime::TransferInput, blockchain::CryptographicallyIncorrectTransactionError};
+    use super::{Command, Transaction};
+
+    #[test]
+    fn verify_transaction_signer() {
+        let mut csprng = OsRng{};
+        let signer: Keypair = Keypair::generate(&mut csprng);
+
+        let command = Command::Transfer( TransferInput{
+            recipient: [0;32],
+            amount: 1000,
+        });
+
+        // Create new transaction for test
+        let mut txn = Transaction::new(&signer, 0, vec![command], 500000, 8, 0);
+        assert!(txn.is_cryptographically_correct().is_ok());
+
+        // set another signer key that cannot decompress Edwards point
+        txn.signer = [5;32];
+        let result = txn.is_cryptographically_correct();
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(),CryptographicallyIncorrectTransactionError::InvalidSigner));
+    }
+
+    #[test]
+    fn verify_invalid_transaction_signature() {
+        let mut csprng = OsRng{};
+        let signer: Keypair = Keypair::generate(&mut csprng);
+
+        let command = Command::Transfer( TransferInput{
+            recipient: [0;32],
+            amount: 1000,
+        });
+
+        // Create new transaction for test
+        let mut txn = Transaction::new(&signer, 0, vec![command], 500000, 8, 0);
+        assert!(txn.is_cryptographically_correct().is_ok());
+
+        // set invalid signature that cannot decompress Edwards point
+        txn.signature = [224;64];
+        let result = txn.is_cryptographically_correct();
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(),CryptographicallyIncorrectTransactionError::InvalidSignature));
+    }
+
+    #[test]
+    fn verify_mismatch_transaction_signature() {
+        let mut csprng = OsRng{};
+        let signer: Keypair = Keypair::generate(&mut csprng);
+        let mut csprng = OsRng{};
+        let receiver: Keypair = Keypair::generate(&mut csprng);
+
+        let command = Command::Transfer( TransferInput{
+            recipient: receiver.public.to_bytes(),
+            amount: 1000,
+        });
+
+        // Create new transaction for test
+        let mut txn = Transaction::new(&signer, 0, vec![command], 500000, 8, 0);
+        assert!(txn.is_cryptographically_correct().is_ok());
+
+        // set another signer with wrong signature
+        txn.signer = receiver.public.to_bytes();
+        let result = txn.is_cryptographically_correct();
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(),CryptographicallyIncorrectTransactionError::WrongSignature));
+    }
+
+    #[test]
+    fn verify_transaction_hash() {
+        let mut csprng = OsRng{};
+        let signer: Keypair = Keypair::generate(&mut csprng);
+
+        let command = Command::Transfer( TransferInput{
+            recipient: [1;32],
+            amount: 1000,
+        });
+
+        // Create new transaction for test
+        let mut txn = Transaction::new(&signer, 0, vec![command], 500000, 8, 0);
+        assert!(txn.is_cryptographically_correct().is_ok());
+
+        // intensionally set invalid hash
+        txn.hash = [0;32];
+        let result = txn.is_cryptographically_correct();
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(),CryptographicallyIncorrectTransactionError::WrongHash));
+    }
+}
