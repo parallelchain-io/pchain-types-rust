@@ -294,7 +294,7 @@ impl TransactionV2 {
     ) -> Self {
         let signer = keypair.public.to_bytes();
 
-        let tuple = [
+        let msg_to_sign = [
             [Self::VERSION_BYTE].to_vec(),
             Serializable::serialize(&signer),
             Serializable::serialize(&nonce),
@@ -304,7 +304,7 @@ impl TransactionV2 {
             Serializable::serialize(&priority_fee_per_gas),
         ].concat();
 
-        let signature = keypair.sign(&Serializable::serialize(&tuple));
+        let signature = keypair.sign(&msg_to_sign);
         
         let hash = sha256(ed25519_dalek::ed25519::signature::Signature::as_bytes(&signature));
         
