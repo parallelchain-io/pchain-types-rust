@@ -10,7 +10,7 @@ use borsh::{BorshSerialize, BorshDeserialize};
 use hotstuff_rs::types::{CryptoHash, BlockHeight};
 use crate::serialization::{Serializable, Deserializable};
 use crate::cryptography::PublicAddress;
-use crate::blockchain::{Block, BlockHeader, Transaction, Receipt, CommandReceipt};
+use crate::blockchain::{Block, BlockHeader, Transaction, Receipt, CommandReceipt, TransactionV2, CommandReceiptV2, BlockV2, ReceiptV2};
 
 /* Transaction RPCs */
 
@@ -21,14 +21,36 @@ pub struct SubmitTransactionRequest {
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub struct SubmitTransactionRequestV2 {
+    pub transaction: TransactionV2
+}
+
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct SubmitTransactionResponse {
     pub error: Option<SubmitTransactionError>,
+}
+
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub struct SubmitTransactionResponseV2 {
+    pub error: Option<SubmitTransactionErrorV2>,
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub enum SubmitTransactionError {
     UnacceptableNonce,
     MempoolFull,
+    Other,
+}
+
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub enum SubmitTransactionErrorV2 {
+    UnacceptableNonce,
+    MempoolFull,
+    GasLimitTooLow,
+    GasLimitTooHigh,
+    BaseFeeTooLow,
+    TransactionSizeTooLarge,
+    FailedCryptographicCheck,
     Other,
 }
 
@@ -43,6 +65,18 @@ pub struct TransactionRequest {
 pub struct TransactionResponse {
     pub transaction: Option<Transaction>,
     pub receipt: Option<Receipt>,
+    pub block_hash: Option<CryptoHash>,
+    pub position: Option<u32>,
+}
+
+/// In version 2, the response includes transactions and receipts in different versions, which means it
+/// is possible to get the receipts in older version,
+/// The pairing of transaction and receipt remains the same - the receipt is in same version with
+/// the verion of the corresponding transaction.
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub struct TransactionResponseV2 {
+    pub transaction: Option<VersionedTransaction>,
+    pub receipt: Option<VersionedReceipt>,
     pub block_hash: Option<CryptoHash>,
     pub position: Option<u32>,
 }
@@ -74,6 +108,28 @@ pub struct ReceiptResponse {
     pub position: Option<u32>,
 }
 
+/// In version 2, the response includes receipts in different versions, which means it
+/// is possible to get the receipts in older version.
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub struct ReceiptResponseV2 {
+    pub transaction_hash: CryptoHash,
+    pub receipt: Option<VersionedReceipt>,
+    pub block_hash: Option<CryptoHash>,
+    pub position: Option<u32>,
+}
+
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub enum VersionedTransaction {
+    TransactionV1(Transaction),
+    TransactionV2(TransactionV2)
+}
+
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub enum VersionedReceipt {
+    ReceiptV1(Receipt),
+    ReceiptV2(ReceiptV2)
+}
+
 /* Block RPCs */
 
 /// Get a block by its block hash.
@@ -85,6 +141,13 @@ pub struct BlockRequest {
 #[derive(Clone, BorshSerialize, BorshDeserialize)]
 pub struct BlockResponse {
     pub block: Option<Block>,
+}
+
+/// In version 2, the block in the response is versioned, which means it is possible
+/// to get a block in older version.
+#[derive(Clone, BorshSerialize, BorshDeserialize)]
+pub struct BlockResponseV2 {
+    pub block: Option<VersionedBlock>,
 }
 
 /// Get a block header by its block hash.
@@ -126,6 +189,12 @@ pub struct BlockHashByHeightResponse {
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct HighestCommittedBlockResponse {
     pub block_hash: Option<CryptoHash>
+}
+
+#[derive(BorshSerialize, BorshDeserialize, Clone)]
+pub enum VersionedBlock {
+    BlockV1(Block),
+    BlockV2(BlockV2)
 }
 
 /* State RPCs */
@@ -214,6 +283,11 @@ pub struct ViewRequest {
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct ViewResponse {
     pub receipt: CommandReceipt
+}
+
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub struct ViewResponseV2 {
+    pub receipt: CommandReceiptV2
 }
 
 /* Account-related types */
@@ -313,5 +387,13 @@ define_serde!(
     PoolsRequest, PoolsResponse,
     StakesRequest, StakesResponse,
     DepositsRequest, DepositsResponse,
-    ViewRequest, ViewResponse
+    ViewRequest, ViewResponse,
+    
+    SubmitTransactionRequestV2, SubmitTransactionResponseV2,
+    TransactionResponseV2,
+    ReceiptResponseV2,
+    BlockResponseV2,
+    ViewResponseV2,
+
+    VersionedBlock, VersionedTransaction, VersionedReceipt
 );

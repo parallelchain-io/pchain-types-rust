@@ -5,6 +5,7 @@
 
 //! Inputs of transaction commands as structures.
 
+use crate::blockchain::Log;
 use crate::serialization::{Serializable, Deserializable};
 use crate::cryptography::PublicAddress;
 
@@ -17,9 +18,6 @@ pub struct TransferInput {
     pub amount: u64
 }
 
-impl Serializable for TransferInput {}
-impl Deserializable for TransferInput {}
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct DeployInput {
     /// Smart contract in format of WASM bytecode
@@ -28,9 +26,6 @@ pub struct DeployInput {
     /// Version of Contract Binary Interface
     pub cbi_version: u32
 }
-
-impl Serializable for DeployInput {}
-impl Deserializable for DeployInput {}
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct CallInput {
@@ -48,8 +43,13 @@ pub struct CallInput {
     pub amount: Option<u64>
 }
 
-impl Serializable for CallInput {}
-impl Deserializable for CallInput {}
+#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+pub struct CallOutput {
+    /// The return value of the corresponding command.
+    pub return_value: Vec<u8>,
+    /// The logs emitted during the corresponding call command.
+    pub logs: Vec<Log>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct CreatePoolInput {
@@ -58,18 +58,12 @@ pub struct CreatePoolInput {
     pub commission_rate: u8
 }
 
-impl Serializable for CreatePoolInput {}
-impl Deserializable for CreatePoolInput {}
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct SetPoolSettingsInput {
     /// Commission rate (in unit of percentage) is the portion that 
     /// the owners of its delegated stakes should pay from the reward in an epoch transaction.
     pub commission_rate: u8,
 }
-
-impl Serializable for SetPoolSettingsInput {}
-impl Deserializable for SetPoolSettingsInput {}
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct CreateDepositInput {
@@ -84,9 +78,6 @@ pub struct CreateDepositInput {
     pub auto_stake_rewards: bool,
 }
 
-impl Serializable for CreateDepositInput {}
-impl Deserializable for CreateDepositInput {} 
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct SetDepositSettingsInput {
     /// The address of operator of the target pool
@@ -97,9 +88,6 @@ pub struct SetDepositSettingsInput {
     pub auto_stake_rewards: bool,
 }
 
-impl Serializable for SetDepositSettingsInput {}
-impl Deserializable for SetDepositSettingsInput {}
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct TopUpDepositInput {
     /// The address of operator of the target pool
@@ -108,9 +96,6 @@ pub struct TopUpDepositInput {
     /// The amount added to Deposit's Balance
     pub amount: u64,
 }
-
-impl Serializable for TopUpDepositInput {}
-impl Deserializable for TopUpDepositInput {}
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct WithdrawDepositInput {
@@ -123,8 +108,11 @@ pub struct WithdrawDepositInput {
     pub max_amount: u64,
 }
 
-impl Serializable for WithdrawDepositInput {}
-impl Deserializable for WithdrawDepositInput {}
+#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+pub struct WithdrawDepositOutput {
+    /// The amount of deposit withdrawn.
+    pub amount_withdrawn: u64
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct StakeDepositInput {
@@ -137,8 +125,11 @@ pub struct StakeDepositInput {
     pub max_amount: u64,
 }
 
-impl Serializable for StakeDepositInput {}
-impl Deserializable for StakeDepositInput {}
+#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+pub struct StakeDepositOutput {
+    /// The amount of deposit staked.
+    pub amount_staked: u64
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct UnstakeDepositInput {
@@ -151,5 +142,30 @@ pub struct UnstakeDepositInput {
     pub max_amount: u64,
 }
 
-impl Serializable for UnstakeDepositInput {}
-impl Deserializable for UnstakeDepositInput {}
+#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+pub struct UnstakeDepositOutput {
+    /// The amount of deposit unstaked.
+    pub amount_unstaked: u64
+}
+
+macro_rules! define_serde {
+    ($($t:ty),*) => {
+        $(
+            impl Serializable for $t {}
+            impl Deserializable for $t {}
+        )*
+    }
+}
+
+define_serde!(
+    TransferInput, DeployInput, CallInput,
+    CreatePoolInput, SetPoolSettingsInput, 
+    CreateDepositInput, SetDepositSettingsInput,
+    TopUpDepositInput, WithdrawDepositInput,
+    StakeDepositInput, UnstakeDepositInput,
+
+    CallOutput,
+    WithdrawDepositOutput,
+    StakeDepositOutput,
+    UnstakeDepositOutput
+);
