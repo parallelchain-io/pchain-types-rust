@@ -431,10 +431,54 @@ pub struct CommandReceipt {
 /// A CommandReceipt summarizes the result of execution of a [Command].
 /// 
 /// [V1](CommandReceipt) -> V2:
-/// - Remove return values and logs
-/// - Add additional field "info" which contains output variants for specific commands
+/// - Command Receipt is now an enum type. Its variants come in the same order as Command.
+/// - All variants have common fields: Exit Code and Gas Used. Some varients have additional
+/// fields.
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
-pub struct CommandReceiptV2{
+pub enum CommandReceiptV2 {
+    Transfer(TransferReceipt),
+    Call(CallReceipt),
+    Deploy(DeployReceipt),
+    CreatePool(CreatePoolReceipt),
+    SetPoolSettings(SetPoolSettingsReceipt),
+    DeletePool(DeletePoolReceipt),
+    CreateDeposit(CreateDepositReceipt),
+    SetDepositSettings(SetDepositSettingsReceipt),
+    TopUpDeposit(TopUpDepositReceipt),
+    WithdrawDeposit(WithdrawDepositReceipt),
+    StakeDeposit(StakeDepositReceipt),
+    UnstakeDeposit(UnstakeDepositReceipt),
+    NextEpoch(NextEpochReceipt),
+}
+
+/// Command Receipt structs with common fields
+macro_rules! command_receipt_common_fields {
+    ($($t:tt),*) => {
+        $(
+            #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+            pub struct $t {
+                /// Exit code tells whether the corresponding command in the sequence
+                /// succeeded in doing its operation, and, if it failed, whether the 
+                /// failure is because of gas exhaustion or some other reason.
+                pub exit_code: ExitCodeV2,
+                /// How much gas was used in the execution of the transaction. 
+                /// This will at most be the transaction’s gas limit.
+                pub gas_used: u64,
+            }
+        )*
+    }
+}
+
+command_receipt_common_fields!(
+    TransferReceipt, DeployReceipt,
+    CreatePoolReceipt, SetPoolSettingsReceipt, DeletePoolReceipt,
+    CreateDepositReceipt, SetDepositSettingsReceipt, TopUpDepositReceipt,
+    NextEpochReceipt
+);
+
+
+#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct CallReceipt {
     /// Exit code tells whether the corresponding command in the sequence
     /// succeeded in doing its operation, and, if it failed, whether the 
     /// failure is because of gas exhaustion or some other reason.
@@ -442,29 +486,54 @@ pub struct CommandReceiptV2{
     /// How much gas was used in the execution of the transaction. 
     /// This will at most be the transaction’s gas limit.
     pub gas_used: u64,
-    /// Additional information which is command-specific. For example, Call command
-    /// outputs additional fields, "return value" and "log".
-    pub info: CommandReceiptInfo,
+    /// The return value of the corresponding command.
+    pub return_value: Vec<u8>,
+    /// The logs emitted during the corresponding call command.
+    pub logs: Vec<Log>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
-pub enum CommandReceiptInfo {
-    Transfer,
-    Call(CallOutput),
-    Deploy,
-    CreatePool,
-    SetPoolSettings,
-    DeletePool,
-    CreateDeposit,
-    SetDepositSettings,
-    TopUpDeposit,
-    WithdrawDeposit(WithdrawDepositOutput),
-    StakeDeposit(StakeDepositOutput),
-    UnstakeDeposit(UnstakeDepositOutput),
-    NextEpoch,
+
+#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+pub struct WithdrawDepositReceipt {
+    /// Exit code tells whether the corresponding command in the sequence
+    /// succeeded in doing its operation, and, if it failed, whether the 
+    /// failure is because of gas exhaustion or some other reason.
+    pub exit_code: ExitCodeV2,
+    /// How much gas was used in the execution of the transaction. 
+    /// This will at most be the transaction’s gas limit.
+    pub gas_used: u64,
+    /// The amount of deposit withdrawn.
+    pub amount_withdrawn: u64
 }
 
-/// Defines the success and error types of receipt or command receipt.
+
+#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+pub struct StakeDepositReceipt {
+    /// Exit code tells whether the corresponding command in the sequence
+    /// succeeded in doing its operation, and, if it failed, whether the 
+    /// failure is because of gas exhaustion or some other reason.
+    pub exit_code: ExitCodeV2,
+    /// How much gas was used in the execution of the transaction. 
+    /// This will at most be the transaction’s gas limit.
+    pub gas_used: u64,
+    /// The amount of deposit staked.
+    pub amount_staked: u64
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+pub struct UnstakeDepositReceipt {
+    /// Exit code tells whether the corresponding command in the sequence
+    /// succeeded in doing its operation, and, if it failed, whether the 
+    /// failure is because of gas exhaustion or some other reason.
+    pub exit_code: ExitCodeV2,
+    /// How much gas was used in the execution of the transaction. 
+    /// This will at most be the transaction’s gas limit.
+    pub gas_used: u64,
+    /// The amount of deposit unstaked.
+    pub amount_unstaked: u64
+}
+
+/// Defines the success and error types of a receipt or command receipt.
 /// 
 /// [V1](ExitStatus) -> V2:
 /// - Add "Not Executed" variant
@@ -505,7 +574,12 @@ macro_rules! define_serde {
 define_serde!(
     Block, BlockV2, BlockHeader, BlockHeaderV2,
     Transaction, TransactionV2, Command, Log, 
-    ReceiptV2, CommandReceipt, CommandReceiptV2, CommandReceiptInfo, ExitStatus, ExitCodeV2
+    ReceiptV2, CommandReceipt, CommandReceiptV2, ExitStatus, ExitCodeV2,
+
+    TransferReceipt, DeployReceipt, CallReceipt,
+    CreatePoolReceipt, SetPoolSettingsReceipt, DeletePoolReceipt,
+    CreateDepositReceipt, SetDepositSettingsReceipt, TopUpDepositReceipt, WithdrawDepositReceipt,
+    StakeDepositReceipt, UnstakeDepositReceipt, NextEpochReceipt
 );
 
 #[cfg(test)]

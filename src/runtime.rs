@@ -5,7 +5,6 @@
 
 //! Inputs of transaction commands as structures.
 
-use crate::blockchain::Log;
 use crate::serialization::{Serializable, Deserializable};
 use crate::cryptography::PublicAddress;
 
@@ -41,14 +40,6 @@ pub struct CallInput {
     /// The amount sent to the target contract. The invoked contract can check the received amount 
     /// by host function `amount()` according to the CBI.
     pub amount: Option<u64>
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
-pub struct CallOutput {
-    /// The return value of the corresponding command.
-    pub return_value: Vec<u8>,
-    /// The logs emitted during the corresponding call command.
-    pub logs: Vec<Log>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
@@ -109,12 +100,6 @@ pub struct WithdrawDepositInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
-pub struct WithdrawDepositOutput {
-    /// The amount of deposit withdrawn.
-    pub amount_withdrawn: u64
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct StakeDepositInput {
     /// The address of operator of the target pool
     pub operator: PublicAddress,
@@ -126,12 +111,6 @@ pub struct StakeDepositInput {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
-pub struct StakeDepositOutput {
-    /// The amount of deposit staked.
-    pub amount_staked: u64
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct UnstakeDepositInput {
     /// The address of operator of the target pool
     pub operator: PublicAddress,
@@ -140,12 +119,6 @@ pub struct UnstakeDepositInput {
     /// The prefix 'max' is denoted here because the actual amount to be removed
     /// can be less than the wanted amount.
     pub max_amount: u64,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
-pub struct UnstakeDepositOutput {
-    /// The amount of deposit unstaked.
-    pub amount_unstaked: u64
 }
 
 macro_rules! define_serde {
@@ -162,10 +135,5 @@ define_serde!(
     CreatePoolInput, SetPoolSettingsInput, 
     CreateDepositInput, SetDepositSettingsInput,
     TopUpDepositInput, WithdrawDepositInput,
-    StakeDepositInput, UnstakeDepositInput,
-
-    CallOutput,
-    WithdrawDepositOutput,
-    StakeDepositOutput,
-    UnstakeDepositOutput
+    StakeDepositInput, UnstakeDepositInput
 );
