@@ -10,7 +10,7 @@ use borsh::{BorshSerialize, BorshDeserialize};
 use hotstuff_rs::types::{CryptoHash, BlockHeight};
 use crate::serialization::{Serializable, Deserializable};
 use crate::cryptography::PublicAddress;
-use crate::blockchain::{Block, BlockHeader, Transaction, Receipt, CommandReceipt, TransactionV2, CommandReceiptV2, BlockV2, ReceiptV2};
+use crate::blockchain::{Block, BlockHeader, Transaction, Receipt, CommandReceipt, TransactionV2, CommandReceiptV2, BlockV2, ReceiptV2, TransactionV1, BlockV1, ReceiptV1};
 
 /* Transaction RPCs */
 
@@ -20,9 +20,10 @@ pub struct SubmitTransactionRequest {
     pub transaction: Transaction
 }
 
+/// Submit a transaction to the mempool.
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct SubmitTransactionRequestV2 {
-    pub transaction: TransactionV2
+    pub transaction: TransactionV1OrV2
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
@@ -44,13 +45,9 @@ pub enum SubmitTransactionError {
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub enum SubmitTransactionErrorV2 {
-    UnacceptableNonce,
-    MempoolFull,
-    GasLimitTooLow,
-    GasLimitTooHigh,
-    BaseFeeTooLow,
-    TransactionSizeTooLarge,
-    FailedCryptographicCheck,
+    NonceLTCommitted,
+    BaseFeePerGasTooLow,
+    MempoolIsFull,
     Other,
 }
 
@@ -75,8 +72,8 @@ pub struct TransactionResponse {
 /// the verion of the corresponding transaction.
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct TransactionResponseV2 {
-    pub transaction: Option<VersionedTransaction>,
-    pub receipt: Option<VersionedReceipt>,
+    pub transaction: Option<TransactionV1ToV2>,
+    pub receipt: Option<ReceiptV1ToV2>,
     pub block_hash: Option<CryptoHash>,
     pub position: Option<u32>,
 }
@@ -113,21 +110,27 @@ pub struct ReceiptResponse {
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct ReceiptResponseV2 {
     pub transaction_hash: CryptoHash,
-    pub receipt: Option<VersionedReceipt>,
+    pub receipt: Option<ReceiptV1ToV2>,
     pub block_hash: Option<CryptoHash>,
     pub position: Option<u32>,
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-pub enum VersionedTransaction {
-    TransactionV1(Transaction),
-    TransactionV2(TransactionV2)
+pub enum TransactionV1OrV2 {
+    V1(TransactionV1),
+    V2(TransactionV2)
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-pub enum VersionedReceipt {
-    ReceiptV1(Receipt),
-    ReceiptV2(ReceiptV2)
+pub enum TransactionV1ToV2 {
+    V1(TransactionV1),
+    V2(TransactionV2)
+}
+
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub enum ReceiptV1ToV2 {
+    V1(ReceiptV1),
+    V2(ReceiptV2)
 }
 
 /* Block RPCs */
@@ -147,7 +150,7 @@ pub struct BlockResponse {
 /// to get a block in older version.
 #[derive(Clone, BorshSerialize, BorshDeserialize)]
 pub struct BlockResponseV2 {
-    pub block: Option<VersionedBlock>,
+    pub block: Option<BlockV1ToV2>,
 }
 
 /// Get a block header by its block hash.
@@ -192,8 +195,8 @@ pub struct HighestCommittedBlockResponse {
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
-pub enum VersionedBlock {
-    BlockV1(Block),
+pub enum BlockV1ToV2 {
+    BlockV1(BlockV1),
     BlockV2(BlockV2)
 }
 
@@ -395,5 +398,5 @@ define_serde!(
     BlockResponseV2,
     ViewResponseV2,
 
-    VersionedBlock, VersionedTransaction, VersionedReceipt
+    BlockV1ToV2, TransactionV1OrV2, TransactionV1ToV2, ReceiptV1ToV2
 );

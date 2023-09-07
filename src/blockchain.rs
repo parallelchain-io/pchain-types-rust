@@ -23,6 +23,7 @@ pub struct Block {
     /// it must also contain its Receipt. Receipts appear in the order of their Transactions.
     pub receipts : Vec<Receipt>,
 }
+pub type BlockV1 = Block;
 
 /// A data structure that describes and authorizes the execution of a batch of transactions (state transitions) on the blockchain.
 /// 
@@ -89,6 +90,7 @@ pub struct BlockHeader {
     /// Log Bloom, the 256-byte Block-level Bloom Filter union of all the Bloom Filters of each Log topic from the Block’s Receipts
     pub log_bloom: BloomFilter,
 }
+pub type BlockHeaderV1 = BlockHeader;
 
 /// Block header defines meta information of a block, including evidence for verifying validity of the block.
 /// 
@@ -178,6 +180,7 @@ pub struct Transaction {
     /// The cryptographic hash of signature
     pub hash: Sha256Hash,
 }
+pub type TransactionV1 = Transaction;
 
 impl Transaction {
     pub fn new(signer: &Keypair, nonce: u64, commands: Vec<Command>, gas_limit: u64, max_base_fee_per_gas: u64, priority_fee_per_gas: u64) -> Transaction {
@@ -394,6 +397,7 @@ pub struct Log {
 
 /// Receipt defines the result of transaction execution.
 pub type Receipt = Vec<CommandReceipt>;
+pub type ReceiptV1 = Receipt;
 
 /// Receipt defines the result of transaction execution.
 /// 
@@ -427,6 +431,7 @@ pub struct CommandReceipt {
     /// The logs emitted during the corresponding call command.
     pub logs: Vec<Log>,
 }
+pub type CommandReceiptV1 = CommandReceipt;
 
 /// A CommandReceipt summarizes the result of execution of a [Command].
 /// 
