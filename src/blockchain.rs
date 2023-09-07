@@ -8,7 +8,7 @@
 use borsh::{BorshSerialize, BorshDeserialize};
 use crate::serialization::{Serializable, Deserializable};
 use crate::cryptography::{Keypair, PublicKey, PublicAddress, SignatureBytes, Signer, Verifier, Sha256Hash, BloomFilter, sha256};
-use crate::runtime::*;
+use crate::{runtime::*, data};
 
 /// A data structure that describes and authorizes the execution of a batch of transactions (state transitions) on the blockchain.
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
@@ -43,6 +43,36 @@ pub struct BlockV2 {
     /// Transaction, it must also contain its Receipt. Receipts appear in the order of their
     /// Transactions.
     pub receipts : Vec<ReceiptV2>,
+}
+
+impl BlockV2 {
+    /// Conversion from [hotstuff_rs::types::Block], with an option to validate
+    /// signature of the transactions.
+    pub fn from_hotstuff_block(
+        block: hotstuff_rs::types::Block, validate_transactions: bool
+    ) -> Result<BlockV2, data::BlockConversionError> {
+        let blockdata = data::BlockDataV2::from_data(&block.data, validate_transactions)?;
+        Ok(BlockV2{
+            header: BlockHeaderV2 {
+                height: block.height,
+                hash: block.hash,
+                justify: block.justify,
+                data_hash: block.data_hash,
+                chain_id: blockdata.header.chain_id,
+                proposer: blockdata.header.proposer,
+                timestamp: blockdata.header.timestamp,
+                base_fee: blockdata.header.base_fee_per_gas,
+                gas_used: blockdata.header.gas_used,
+                txs_hash: blockdata.header.transactions_hash,
+                receipts_hash: blockdata.header.receipts_hash,
+                state_hash: blockdata.header.state_hash,
+                log_bloom: blockdata.header.log_bloom
+            },
+            transactions: blockdata.transactions,
+            receipts: blockdata.receipts
+        })
+
+    }
 }
 
 /// Block header defines meta information of a block, including evidence for verifying validity of the block.

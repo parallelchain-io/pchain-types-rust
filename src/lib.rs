@@ -19,6 +19,8 @@ pub mod cryptography;
 
 pub mod blockchain;
 
+pub mod data;
+
 pub mod rpc;
 
 pub mod runtime;
