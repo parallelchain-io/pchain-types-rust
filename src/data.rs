@@ -4,7 +4,7 @@
 */
 
 //! Defines the data utilization of [hotstuff_rs::types::Data] (i.e. HotstuffData, a vector of vector of bytes) to serve the application. 
-//! The module also provides a struct called [AppBlock] as a data abstraction of [hotstuff_rs::types::Block].data.
+//! The module also provides a struct called BlockData as a data abstraction of [hotstuff_rs::types::Block].data.
 //! 
 //! HotstuffData is a vector of vector of bytes. Each slot contains data in bytes (`Vec<u8>`). Block data is allocated into slots as below:
 //! 
@@ -112,7 +112,7 @@ impl BlockDataV2 {
         hotstuff_data: &Data,
         validate_transactions: bool
     ) -> Result<BlockDataV2, BlockConversionError> {
-        // Construct AppBlockHeader from fixed datum indexes 
+        // Construct BlockDataheader from fixed datum indexes 
         let header: BlockDataHeaderV2 = BlockDataHeaderV2::try_from(hotstuff_data)
             .map_err(BlockConversionError::WrongHeader)?;
         
@@ -260,7 +260,7 @@ impl TryFrom<&Data> for BlockDataHeaderV2 {
     }
 }
 
-/// Enumerates errors in conversion from HotStuffData to AppBlockHeader.
+/// Enumerates errors in conversion from HotStuffData to BlockDataHeader.
 #[derive(Debug)]
 pub enum BlockHeaderConversionError {
     /// Wrong number of slice of bytes
@@ -303,7 +303,7 @@ impl From<BlockDataHeaderV2> for Data {
 }
 
 
-/// Enumerates errors in conversion from HotStuffData to AppBlock.
+/// Enumerates errors in conversion from HotStuffData to BlockData.
 #[derive(Debug)]
 pub enum BlockConversionError {
     /// Fail to convert Block Header.
