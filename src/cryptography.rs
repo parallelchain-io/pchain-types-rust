@@ -49,11 +49,31 @@ pub use ed25519_dalek::Verifier;
 /// - a contract address.
 pub type PublicAddress = [u8; 32];
 
-pub fn contract_address(signer: &PublicAddress, nonce: u64) -> PublicAddress {
+/// Compute contract address. It is the first version of contract address formula which is 
+/// defined in ParallelChain Protocol V0.4.
+pub fn contract_address_v1(signer: &PublicAddress, nonce: u64) -> PublicAddress {
     let mut hasher = Sha256::new();
     let mut pre_image = Vec::new();
     pre_image.extend(signer);
     pre_image.extend(nonce.to_le_bytes().to_vec());
+
+    hasher.update(pre_image);
+
+    hasher.finalize().into()
+}
+
+/// Compute contract address. It is the second version of contract address formula which is introduced 
+/// in ParallelChain Protocol V0.5.
+/// 
+/// [V1](contract_address_v1) -> V2:
+/// - Contract address is to be a function of the `index` of the deploy command
+/// in a transaction submitted by the `signer` with nonce = `nonce`.
+pub fn contract_address_v2(signer: &PublicAddress, nonce: u64, index: u32) -> PublicAddress {
+    let mut hasher = Sha256::new();
+    let mut pre_image = Vec::new();
+    pre_image.extend(signer);
+    pre_image.extend(nonce.to_le_bytes().to_vec());
+    pre_image.extend(index.to_le_bytes().to_vec());
 
     hasher.update(pre_image);
 
@@ -94,7 +114,7 @@ pub type BloomFilter = [u8; 256];
 #[cfg(test)]
 mod test {
     use sha2::{Sha256, Digest};
-    use crate::cryptography::contract_address;
+    use crate::cryptography::{contract_address_v1, contract_address_v2};
     use super::{PublicAddress, merkle_root};
 
     #[test]
@@ -102,17 +122,31 @@ mod test {
         let public_key: PublicAddress = [79, 219, 143, 101, 101, 30, 7, 240, 226, 225, 53, 61, 92, 149, 233, 23, 2, 91, 251, 246, 191, 245, 83, 59, 53, 40, 126, 239, 84, 133, 130, 30];
         let nonce: u64 = 100;
 
+        // Version 1
         let bytes = [79, 219, 143, 101, 101, 30, 7, 240, 226, 225, 53, 61, 92, 149, 233, 23, 2, 91, 251, 246, 191, 245, 83, 59, 53, 40, 126, 239, 84, 133, 130, 30, 100, 0, 0, 0, 0, 0, 0, 0];
-        let addr: PublicAddress = {
+        let addr_v1: PublicAddress = {
             let mut hasher = Sha256::new();
             hasher.update(bytes);
             hasher.finalize().into()
         };
 
-        assert_eq!(addr, contract_address(&public_key, nonce));
-
+        assert_eq!(addr_v1, contract_address_v1(&public_key, nonce));
         // check the result of same address with different nonce
-        assert_ne!(contract_address(&public_key, nonce), contract_address(&public_key, nonce + 1));
+        assert_ne!(contract_address_v1(&public_key, nonce), contract_address_v1(&public_key, nonce + 1));
+
+        // Version 2
+        let bytes = [79, 219, 143, 101, 101, 30, 7, 240, 226, 225, 53, 61, 92, 149, 233, 23, 2, 91, 251, 246, 191, 245, 83, 59, 53, 40, 126, 239, 84, 133, 130, 30, 100, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0];
+        let addr_v2: PublicAddress = {
+            let mut hasher = Sha256::new();
+            hasher.update(bytes);
+            hasher.finalize().into()
+        };
+
+        assert_eq!(addr_v2, contract_address_v2(&public_key, nonce, 1));
+        // check the result of same address with different nonce
+        assert_ne!(contract_address_v2(&public_key, nonce, 1), contract_address_v2(&public_key, nonce + 1, 1));
+        // check the result of same address with different index
+        assert_ne!(contract_address_v2(&public_key, nonce, 1), contract_address_v2(&public_key, nonce, 2));
     }
 
     #[test]
