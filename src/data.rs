@@ -110,7 +110,7 @@ impl BlockDataV2 {
     /// Conversion from [hotstuff_rs::types::Data] with an option to validate the transactions.
     pub fn from_data(
         hotstuff_data: &Data,
-        validate_transactions: bool
+        verify_transaction_signatures: bool
     ) -> Result<BlockDataV2, BlockConversionError> {
         // Construct BlockDataheader from fixed datum indexes 
         let header: BlockDataHeaderV2 = BlockDataHeaderV2::try_from(hotstuff_data)
@@ -126,7 +126,7 @@ impl BlockDataV2 {
             let txn: TransactionV2 = Deserializable::deserialize(txn_bs)
                 .map_err(|_| BlockConversionError::Transaction)?;
             // Check transactions signature and return error immediately if there is an invalid transaction.
-            if validate_transactions {
+            if verify_transaction_signatures {
                 txn.is_cryptographically_correct()
                     .map_err(|_| BlockConversionError::InvalidTransactionSignature)?;
             }

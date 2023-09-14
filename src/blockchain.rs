@@ -49,9 +49,9 @@ impl BlockV2 {
     /// Conversion from [hotstuff_rs::types::Block], with an option to validate
     /// signature of the transactions.
     pub fn from_hotstuff_block(
-        block: hotstuff_rs::types::Block, validate_transactions: bool
+        block: hotstuff_rs::types::Block, verify_transaction_signatures: bool
     ) -> Result<BlockV2, data::BlockConversionError> {
-        let blockdata = data::BlockDataV2::from_data(&block.data, validate_transactions)?;
+        let blockdata = data::BlockDataV2::from_data(&block.data, verify_transaction_signatures)?;
         Ok(BlockV2{
             header: BlockHeaderV2 {
                 height: block.height,
@@ -622,92 +622,298 @@ mod test {
     use rand::rngs::OsRng;
     use ed25519_dalek::Keypair;
 
-    use crate::{runtime::TransferInput, blockchain::CryptographicallyIncorrectTransactionError};
-    use super::{Command, Transaction};
+    use crate::{runtime::TransferInput, blockchain::{CryptographicallyIncorrectTransactionError, TransactionV2}, data::{BlockDataV2, BlockDataHeaderV2, DatumIndexV2, BlockConversionError, BlockHeaderConversionError}, serialization::Serializable};
+    use super::{Command, Transaction, BlockV2, ReceiptV2, ExitCodeV2};
 
     #[test]
-    fn verify_transaction_signer() {
-        let mut csprng = OsRng{};
-        let signer: Keypair = Keypair::generate(&mut csprng);
-
-        let command = Command::Transfer( TransferInput{
-            recipient: [0;32],
-            amount: 1000,
-        });
-
+    fn verify_transaction_v1() {
         // Create new transaction for test
-        let mut txn = Transaction::new(&signer, 0, vec![command], 500000, 8, 0);
+        let txn = {
+            let mut csprng = OsRng{};
+            let signer: Keypair = Keypair::generate(&mut csprng);
+
+            let command = Command::Transfer( TransferInput{
+                recipient: [0;32],
+                amount: 1000,
+            });
+            Transaction::new(&signer, 0, vec![command], 500000, 8, 0)
+        };
+
+        // Verify transaction signature
         assert!(txn.is_cryptographically_correct().is_ok());
 
-        // set another signer key that cannot decompress Edwards point
-        txn.signer = [5;32];
-        let result = txn.is_cryptographically_correct();
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(),CryptographicallyIncorrectTransactionError::InvalidSigner));
+        // Set another signer key that cannot decompress Edwards point
+        let invalid_txn = Transaction {
+            signer: [5; 32],
+            ..txn.clone()
+        };
+        let result = invalid_txn.is_cryptographically_correct();
+        assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::InvalidSigner)));
+
+        // Set invalid signature that cannot decompress Edwards point
+        let invalid_txn = Transaction {
+            signature: [224;64],
+            ..txn.clone()
+        };
+        let result = invalid_txn.is_cryptographically_correct();
+        assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::InvalidSignature)));
+
+        // Intensionally set invalid hash
+        let invalid_txn = Transaction {
+            hash: [0;32],
+            ..txn.clone()
+        };
+        let result = invalid_txn.is_cryptographically_correct();
+        assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::WrongHash)));
+
+        // Set another signer with wrong signature
+        let mut csprng = OsRng{};
+        let wrong_signer: Keypair = Keypair::generate(&mut csprng);
+        let invalid_txn = Transaction {
+            signer: wrong_signer.public.to_bytes(),
+            ..txn.clone()
+        };
+        let result = invalid_txn.is_cryptographically_correct();
+        assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::WrongSignature)));
     }
 
     #[test]
-    fn verify_invalid_transaction_signature() {
-        let mut csprng = OsRng{};
-        let signer: Keypair = Keypair::generate(&mut csprng);
-
-        let command = Command::Transfer( TransferInput{
-            recipient: [0;32],
-            amount: 1000,
-        });
-
+    fn verify_transaction_v2() {
         // Create new transaction for test
-        let mut txn = Transaction::new(&signer, 0, vec![command], 500000, 8, 0);
+        let txn = {
+            let mut csprng = OsRng{};
+            let signer: Keypair = Keypair::generate(&mut csprng);
+
+            let command = Command::Transfer( TransferInput{
+                recipient: [0;32],
+                amount: 1000,
+            });
+            TransactionV2::new(&signer, 0, vec![command], 500000, 8, 0)
+        };
+
+        // Verify transaction signature
         assert!(txn.is_cryptographically_correct().is_ok());
 
-        // set invalid signature that cannot decompress Edwards point
-        txn.signature = [224;64];
-        let result = txn.is_cryptographically_correct();
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(),CryptographicallyIncorrectTransactionError::InvalidSignature));
+        // Set another signer key that cannot decompress Edwards point
+        let invalid_txn = TransactionV2 {
+            signer: [5; 32],
+            ..txn.clone()
+        };
+        let result = invalid_txn.is_cryptographically_correct();
+        assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::InvalidSigner)));
+
+        // Set invalid signature that cannot decompress Edwards point
+        let invalid_txn = TransactionV2 {
+            signature: [224;64],
+            ..txn.clone()
+        };
+        let result = invalid_txn.is_cryptographically_correct();
+        assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::InvalidSignature)));
+
+        // Intensionally set invalid hash
+        let invalid_txn = TransactionV2 {
+            hash: [0;32],
+            ..txn.clone()
+        };
+        let result = invalid_txn.is_cryptographically_correct();
+        assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::WrongHash)));
+
+        // Set another signer with wrong signature
+        let mut csprng = OsRng{};
+        let wrong_signer: Keypair = Keypair::generate(&mut csprng);
+        let invalid_txn = TransactionV2 {
+            signer: wrong_signer.public.to_bytes(),
+            ..txn.clone()
+        };
+        let result = invalid_txn.is_cryptographically_correct();
+        assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::WrongSignature)));
     }
 
     #[test]
-    fn verify_mismatch_transaction_signature() {
-        let mut csprng = OsRng{};
-        let signer: Keypair = Keypair::generate(&mut csprng);
-        let mut csprng = OsRng{};
-        let receiver: Keypair = Keypair::generate(&mut csprng);
+    fn verify_block_data_conversion() {
+        // Prepare test data: transaction receipt and a Hotsuff Block
+        let transaction = {
+            let mut csprng = OsRng{};
+            let signer: Keypair = Keypair::generate(&mut csprng);
 
-        let command = Command::Transfer( TransferInput{
-            recipient: receiver.public.to_bytes(),
-            amount: 1000,
-        });
+            let command = Command::Transfer( TransferInput{
+                recipient: [0;32],
+                amount: 1000,
+            });
+            TransactionV2::new(&signer, 0, vec![command], 500000, 8, 0)
+        };
+        let receipt = ReceiptV2 {
+            command_receipts: Vec::new(),
+            exit_code: ExitCodeV2::Ok,
+            gas_used: 12345,
+        };
+        let block = {
+            let block_data = BlockDataV2 {
+                header: BlockDataHeaderV2 {
+                    chain_id: 123,
+                    base_fee_per_gas: 8, 
+                    proposer: [3u8; 32],
+                    timestamp: 12345678,
+                    gas_used: 100,
+                    transactions_hash: [45u8; 32],
+                    receipts_hash: [56u8; 32],
+                    state_hash: [99u8; 32],
+                    log_bloom: [11u8; 256]
+                },
+                transactions: vec![transaction.clone()],
+                receipts: vec![receipt.clone()]
+            };
 
-        // Create new transaction for test
-        let mut txn = Transaction::new(&signer, 0, vec![command], 500000, 8, 0);
-        assert!(txn.is_cryptographically_correct().is_ok());
+            let hotstuff_data = hotstuff_rs::types::Data::from(block_data);
+            hotstuff_rs::types::Block::new(
+                1234, 
+                hotstuff_rs::types::QuorumCertificate {
+                    chain_id: 123,
+                    view: 2,
+                    block: [32u8; 32],
+                    phase: hotstuff_rs::types::Phase::Generic,
+                    signatures: vec![]
+                }, 
+                [45u8; 32],
+                hotstuff_data
+            )
+        };
+        let block_hash_computed_from_hotstuff_rs = block.hash;
 
-        // set another signer with wrong signature
-        txn.signer = receiver.public.to_bytes();
-        let result = txn.is_cryptographically_correct();
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(),CryptographicallyIncorrectTransactionError::WrongSignature));
-    }
+        let verify_block = |blockv2: BlockV2| {
+            assert_eq!(blockv2.header.height, 1234);
+            assert_eq!(blockv2.header.chain_id, 123);
+            assert_eq!(blockv2.header.proposer, [3u8; 32]);
+            assert_eq!(blockv2.header.base_fee, 8);
+            assert_eq!(blockv2.header.gas_used, 100);
+            assert_eq!(blockv2.header.justify.chain_id, 123);
+            assert_eq!(blockv2.header.justify.view, 2);
+            assert_eq!(blockv2.header.justify.block, [32u8; 32]);
+            assert_eq!(blockv2.header.justify.phase, hotstuff_rs::types::Phase::Generic);
+            assert_eq!(blockv2.header.justify.signatures, vec![]);
+            assert_eq!(blockv2.header.timestamp, 12345678);
+            assert_eq!(blockv2.header.txs_hash, [45u8; 32]);
+            assert_eq!(blockv2.header.receipts_hash, [56u8; 32]);
+            assert_eq!(blockv2.header.state_hash, [99u8; 32]);
+            assert_eq!(blockv2.header.data_hash, [45u8; 32]);
+            assert_eq!(blockv2.header.log_bloom, [11u8; 256]);
+            assert_eq!(blockv2.header.hash, block_hash_computed_from_hotstuff_rs);
+    
+            assert_eq!(blockv2.transactions.first().unwrap(), &transaction);
+            assert_eq!(blockv2.receipts.first().unwrap(), &receipt);
+        };
 
-    #[test]
-    fn verify_transaction_hash() {
-        let mut csprng = OsRng{};
-        let signer: Keypair = Keypair::generate(&mut csprng);
+        // Without verifying transaction signature
+        let blockv2 = BlockV2::from_hotstuff_block(block.clone(), false).unwrap();
+        verify_block(blockv2);
 
-        let command = Command::Transfer( TransferInput{
-            recipient: [1;32],
-            amount: 1000,
-        });
+        // Block Conversion with verifying transaction signature.
+        let blockv2 = BlockV2::from_hotstuff_block(block.clone(), true).unwrap();
+        verify_block(blockv2);
 
-        // Create new transaction for test
-        let mut txn = Transaction::new(&signer, 0, vec![command], 500000, 8, 0);
-        assert!(txn.is_cryptographically_correct().is_ok());
+        // Verify transaction signature
+        let mut invalid_block = block.clone();
+        match invalid_block.data.get_mut(DatumIndexV2::transactions_start_index() as usize) {
+            Some(tx_ptr) => {
+                *tx_ptr = Serializable::serialize(&TransactionV2 {
+                    signature: [99u8; 64], // wrong signature
+                    ..transaction
+                });
+            },
+            None => panic!("cannot find the first transaction in block data!")
+        }
+        assert!(matches!(BlockV2::from_hotstuff_block(invalid_block, true),Err(BlockConversionError::InvalidTransactionSignature)));
 
-        // intensionally set invalid hash
-        txn.hash = [0;32];
-        let result = txn.is_cryptographically_correct();
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(),CryptographicallyIncorrectTransactionError::WrongHash));
+        // Verify transaction integrity
+        let mut invalid_block = block.clone();
+        match invalid_block.data.get_mut(DatumIndexV2::transactions_start_index() as usize) {
+            Some(tx_ptr) => {
+                *tx_ptr = vec![1u8];
+            },
+            None => panic!("cannot find the first transaction in block data!")
+        }
+        assert!(matches!(BlockV2::from_hotstuff_block(invalid_block, false),Err(BlockConversionError::Transaction)));
+
+        // Verify receipt integrity
+        let mut invalid_block = block.clone();
+        match invalid_block.data.get_mut(DatumIndexV2::receipts_start_index(1) as usize) {
+            Some(recp_ptr) => {
+                *recp_ptr = vec![1u8];
+            },
+            None => panic!("cannot find the first receipt in block data!")
+        }
+        assert!(matches!(BlockV2::from_hotstuff_block(invalid_block, false),Err(BlockConversionError::Receipt)));
+
+        // Verify block header integrity
+        // - Number of Slots
+        let mut invalid_block = block.clone();
+        invalid_block.data = Vec::new();
+        assert!(matches!(
+            BlockV2::from_hotstuff_block(invalid_block, false),
+            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::NumberOfSlots))
+        ));
+        // - chain id
+        let mut invalid_block = block.clone();
+        DatumIndexV2::set_chain_id(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV2::from_hotstuff_block(invalid_block, false),
+            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::ChainID))
+        ));
+        // - proposer
+        let mut invalid_block = block.clone();
+        DatumIndexV2::set_proposer(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV2::from_hotstuff_block(invalid_block, false),
+            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::Proposer))
+        ));
+        // - base_fee_per_gas
+        let mut invalid_block = block.clone();
+        DatumIndexV2::set_base_fee_per_gas(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV2::from_hotstuff_block(invalid_block, false),
+            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::BaseFee))
+        ));
+        // - gas_used
+        let mut invalid_block = block.clone();
+        DatumIndexV2::set_gas_used(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV2::from_hotstuff_block(invalid_block, false),
+            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::GasUsed))
+        ));
+        // - timestamp
+        let mut invalid_block = block.clone();
+        DatumIndexV2::set_timestamp(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV2::from_hotstuff_block(invalid_block, false),
+            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::Timestamp))
+        ));
+        // - transactions_hash
+        let mut invalid_block = block.clone();
+        DatumIndexV2::set_transactions_hash(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV2::from_hotstuff_block(invalid_block, false),
+            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::TxsHash))
+        ));
+        // - receipts_hash
+        let mut invalid_block = block.clone();
+        DatumIndexV2::set_receipts_hash(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV2::from_hotstuff_block(invalid_block, false),
+            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::ReceiptsHash))
+        ));
+        // - state_hash
+        let mut invalid_block = block.clone();
+        DatumIndexV2::set_state_hash(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV2::from_hotstuff_block(invalid_block, false),
+            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::StateHash))
+        ));
+        // - log_bloom
+        let mut invalid_block = block.clone();
+        DatumIndexV2::set_log_bloom(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV2::from_hotstuff_block(invalid_block, false),
+            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::LogBloom))
+        ));
     }
 }
