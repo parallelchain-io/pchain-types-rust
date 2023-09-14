@@ -10,14 +10,14 @@ use borsh::{BorshSerialize, BorshDeserialize};
 use hotstuff_rs::types::{CryptoHash, BlockHeight};
 use crate::serialization::{Serializable, Deserializable};
 use crate::cryptography::PublicAddress;
-use crate::blockchain::{Block, BlockHeader, Transaction, Receipt, CommandReceipt, TransactionV2, CommandReceiptV2, BlockV2, ReceiptV2, TransactionV1, BlockV1, ReceiptV1};
+use crate::blockchain::{BlockV1, BlockHeaderV1, CommandReceiptV1, TransactionV2, CommandReceiptV2, BlockV2, ReceiptV2, TransactionV1, ReceiptV1};
 
 /* Transaction RPCs */
 
 /// Submit a transaction to the mempool.
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-pub struct SubmitTransactionRequest {
-    pub transaction: Transaction
+pub struct SubmitTransactionRequestV1 {
+    pub transaction: TransactionV1
 }
 
 /// Submit a transaction to the mempool.
@@ -27,8 +27,8 @@ pub struct SubmitTransactionRequestV2 {
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-pub struct SubmitTransactionResponse {
-    pub error: Option<SubmitTransactionError>,
+pub struct SubmitTransactionResponseV1 {
+    pub error: Option<SubmitTransactionErrorV1>,
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
@@ -37,7 +37,7 @@ pub struct SubmitTransactionResponseV2 {
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-pub enum SubmitTransactionError {
+pub enum SubmitTransactionErrorV1 {
     UnacceptableNonce,
     MempoolFull,
     Other,
@@ -64,9 +64,9 @@ pub struct TransactionRequest {
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-pub struct TransactionResponse {
-    pub transaction: Option<Transaction>,
-    pub receipt: Option<Receipt>,
+pub struct TransactionResponseV1 {
+    pub transaction: Option<TransactionV1>,
+    pub receipt: Option<ReceiptV1>,
     pub block_hash: Option<CryptoHash>,
     pub position: Option<u32>,
 }
@@ -103,9 +103,9 @@ pub struct ReceiptRequest {
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-pub struct ReceiptResponse {
+pub struct ReceiptResponseV1 {
     pub transaction_hash: CryptoHash,
-    pub receipt: Option<Receipt>,
+    pub receipt: Option<ReceiptV1>,
     pub block_hash: Option<CryptoHash>,
     pub position: Option<u32>,
 }
@@ -154,8 +154,8 @@ pub struct BlockRequest {
 }
 
 #[derive(Clone, BorshSerialize, BorshDeserialize)]
-pub struct BlockResponse {
-    pub block: Option<Block>,
+pub struct BlockResponseV1 {
+    pub block: Option<BlockV1>,
 }
 
 /// In version 2, the block in the response is versioned, which means it is possible
@@ -173,7 +173,7 @@ pub struct BlockHeaderRequest {
 
 #[derive(Clone, BorshSerialize, BorshDeserialize)]
 pub struct BlockHeaderResponse {
-    pub block_header: Option<BlockHeader>,
+    pub block_header: Option<BlockHeaderV1>,
 }
 
 /// Get the height of the block with a given block hash.
@@ -296,8 +296,8 @@ pub struct ViewRequest {
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-pub struct ViewResponse {
-    pub receipt: CommandReceipt
+pub struct ViewResponseV1 {
+    pub receipt: CommandReceiptV1
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
@@ -388,11 +388,12 @@ macro_rules! define_serde {
 }
 
 define_serde!(
-    SubmitTransactionRequest, SubmitTransactionResponse,
-    TransactionRequest, TransactionResponse,
-    TransactionPositionRequest, TransactionPositionResponse,
-    ReceiptRequest, ReceiptResponse,
-    BlockRequest, BlockResponse,
+    SubmitTransactionRequestV1, SubmitTransactionResponseV1,
+    SubmitTransactionRequestV2, SubmitTransactionResponseV2,
+    TransactionRequest, TransactionResponseV1, TransactionResponseV2,
+    TransactionPositionRequest, TransactionPositionResponse, 
+    ReceiptRequest, ReceiptResponseV1, ReceiptResponseV2,
+    BlockRequest, BlockResponseV1, BlockResponseV2,
     BlockHeaderRequest, BlockHeaderResponse,
     BlockHeightByHashRequest, BlockHeightByHashResponse,
     BlockHashByHeightRequest, BlockHashByHeightResponse,
@@ -402,13 +403,7 @@ define_serde!(
     PoolsRequest, PoolsResponse,
     StakesRequest, StakesResponse,
     DepositsRequest, DepositsResponse,
-    ViewRequest, ViewResponse,
-    
-    SubmitTransactionRequestV2, SubmitTransactionResponseV2,
-    TransactionResponseV2,
-    ReceiptResponseV2,
-    BlockResponseV2,
-    ViewResponseV2,
+    ViewRequest, ViewResponseV1, ViewResponseV2,
 
     BlockV1ToV2, TransactionV1OrV2, TransactionV1ToV2, ReceiptV1ToV2
 );

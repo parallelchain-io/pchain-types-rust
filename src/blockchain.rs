@@ -12,22 +12,21 @@ use crate::{runtime::*, data};
 
 /// A data structure that describes and authorizes the execution of a batch of transactions (state transitions) on the blockchain.
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
-pub struct Block {
+pub struct BlockV1 {
     /// Block header
-    pub header : BlockHeader,
+    pub header : BlockHeaderV1,
 
     /// A dynamically sized list of Transactions
-    pub transactions : Vec<Transaction>,
+    pub transactions : Vec<TransactionV1>,
 
     /// A dynamically sized list of Receipts. If a Block contains a Transaction,
     /// it must also contain its Receipt. Receipts appear in the order of their Transactions.
-    pub receipts : Vec<Receipt>,
+    pub receipts : Vec<ReceiptV1>,
 }
-pub type BlockV1 = Block;
 
 /// A data structure that describes and authorizes the execution of a batch of transactions (state transitions) on the blockchain.
 /// 
-/// [V1](Block) -> V2: 
+/// [V1](BlockV1) -> V2: 
 /// - "Header" is now of type BlockHeaderV2.
 /// - "Transactions" is now of type TransactionV2.
 /// - "Receipts" is now of type ReceiptV2.
@@ -77,7 +76,7 @@ impl BlockV2 {
 
 /// Block header defines meta information of a block, including evidence for verifying validity of the block.
 #[derive(Clone, BorshSerialize, BorshDeserialize)]
-pub struct BlockHeader {
+pub struct BlockHeaderV1 {
     /// Block hash of this block
     pub hash: Sha256Hash,
 
@@ -120,11 +119,10 @@ pub struct BlockHeader {
     /// Log Bloom, the 256-byte Block-level Bloom Filter union of all the Bloom Filters of each Log topic from the Block’s Receipts
     pub log_bloom: BloomFilter,
 }
-pub type BlockHeaderV1 = BlockHeader;
 
 /// Block header defines meta information of a block, including evidence for verifying validity of the block.
 /// 
-/// [V1](BlockHeader) -> V2:
+/// [V1](BlockHeaderV1) -> V2:
 /// - The position of the “Hash” and “Height” fields are now reversed. Height comes first.
 /// - "Transactions Hash" is now the root of the binary merkle tree over the block’s transactions’ hashes, instead of full transactions.
 #[derive(Clone, BorshSerialize, BorshDeserialize)]
@@ -182,7 +180,7 @@ pub struct BlockHeaderV2 {
 /// 2. Using a struct expression (i.e., `Transaction { signer: ..., }`): this does not check the signature and hash 
 ///    fields.
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
-pub struct Transaction {
+pub struct TransactionV1 {
     /// The public address of the external account which signed this transaction
     pub signer: PublicAddress,
 
@@ -210,11 +208,10 @@ pub struct Transaction {
     /// The cryptographic hash of signature
     pub hash: Sha256Hash,
 }
-pub type TransactionV1 = Transaction;
 
-impl Transaction {
-    pub fn new(signer: &Keypair, nonce: u64, commands: Vec<Command>, gas_limit: u64, max_base_fee_per_gas: u64, priority_fee_per_gas: u64) -> Transaction {
-        let mut transaction = Transaction {
+impl TransactionV1 {
+    pub fn new(signer: &Keypair, nonce: u64, commands: Vec<Command>, gas_limit: u64, max_base_fee_per_gas: u64, priority_fee_per_gas: u64) -> TransactionV1 {
+        let mut transaction = TransactionV1 {
             signer: signer.public.to_bytes(),
             nonce,
             commands,
@@ -250,7 +247,7 @@ impl Transaction {
 
         // 3.
         let signed_msg = {
-            let intermediate_txn = Transaction {
+            let intermediate_txn = TransactionV1 {
                 signature: [0u8; 64],
                 hash: [0u8; 32],
                 ..self.to_owned()
@@ -279,7 +276,7 @@ impl Transaction {
 /// 2. Using a struct expression (i.e., `Transaction { signer: ..., }`): this does not check the signature and hash 
 ///    fields.
 /// 
-/// [V1](Transaction) -> V2:
+/// [V1](TransactionV1) -> V2:
 /// - "Signature" is now computed over the tuple: (2u8, Signer, Nonce, Commands, Gas Limit, Max Base Fee per Gas,
 /// Priority Fee Per Gas) instead of an “intermediate transaction” (in the tuple, 2u8 corresponds to the fact that
 /// TransactionV2 is the second version of transaction)
@@ -312,7 +309,6 @@ pub struct TransactionV2 {
     /// The cryptographic hash of signature
     pub hash: Sha256Hash,
 }
-
 
 impl TransactionV2 {
     const VERSION_BYTE: u8 = 2u8;
@@ -428,8 +424,7 @@ pub struct Log {
 }
 
 /// Receipt defines the result of transaction execution.
-pub type Receipt = Vec<CommandReceipt>;
-pub type ReceiptV1 = Receipt;
+pub type ReceiptV1 = Vec<CommandReceiptV1>;
 
 /// Receipt defines the result of transaction execution.
 /// 
@@ -450,11 +445,11 @@ pub struct ReceiptV2 {
 
 /// A CommandReceipt summarizes the result of execution of a [Command].
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
-pub struct CommandReceipt {
-    /// Exit status tells whether the corresponding command in the sequence
+pub struct CommandReceiptV1 {
+    /// Exit code tells whether the corresponding command in the sequence
     /// succeeded in doing its operation, and, if it failed, whether the 
     /// failure is because of gas exhaustion or some other reason.
-    pub exit_status: ExitStatus,
+    pub exit_code: ExitCodeV1,
     /// How much gas was used in the execution of the transaction. 
     /// This will at most be the transaction’s gas limit.
     pub gas_used: u64,
@@ -463,11 +458,10 @@ pub struct CommandReceipt {
     /// The logs emitted during the corresponding call command.
     pub logs: Vec<Log>,
 }
-pub type CommandReceiptV1 = CommandReceipt;
 
 /// A CommandReceipt summarizes the result of execution of a [Command].
 /// 
-/// [V1](CommandReceipt) -> V2:
+/// [V1](CommandReceiptV1) -> V2:
 /// - Command Receipt is now an enum type. Its variants come in the same order as Command.
 /// - All variants have common fields: Exit Code and Gas Used. Some varients have additional
 /// fields.
@@ -572,7 +566,7 @@ pub struct UnstakeDepositReceipt {
 
 /// Defines the success and error types of a receipt or command receipt.
 /// 
-/// [V1](ExitStatus) -> V2:
+/// [V1](ExitCodeV1) -> V2:
 /// - Add "Not Executed" variant
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum ExitCodeV2 {
@@ -586,9 +580,9 @@ pub enum ExitCodeV2 {
     NotExecuted,
 }
 
-/// ExitStatus defines the success and error types of receipt.
+/// Defines the success and error types of receipt.
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
-pub enum ExitStatus {
+pub enum ExitCodeV1 {
     /// The Transaction successfully accomplished everything that it could have been expected to do.
     Success,
 
@@ -609,9 +603,9 @@ macro_rules! define_serde {
 }
 
 define_serde!(
-    Block, BlockV2, BlockHeader, BlockHeaderV2,
-    Transaction, TransactionV2, Command, Log, 
-    ReceiptV2, CommandReceipt, CommandReceiptV2, ExitStatus, ExitCodeV2,
+    BlockV1, BlockV2, BlockHeaderV1, BlockHeaderV2,
+    TransactionV1, TransactionV2, Command, Log, 
+    ReceiptV2, CommandReceiptV1, CommandReceiptV2, ExitCodeV1, ExitCodeV2,
 
     TransferReceipt, DeployReceipt, CallReceipt,
     CreatePoolReceipt, SetPoolSettingsReceipt, DeletePoolReceipt,
@@ -625,7 +619,7 @@ mod test {
     use ed25519_dalek::Keypair;
 
     use crate::{runtime::TransferInput, blockchain::{CryptographicallyIncorrectTransactionError, TransactionV2}, data::{BlockDataV2, BlockHeaderDataV2, DatumIndexV2, BlockConversionError, BlockHeaderConversionError}, serialization::Serializable};
-    use super::{Command, Transaction, BlockV2, ReceiptV2, ExitCodeV2};
+    use super::{Command, TransactionV1, BlockV2, ReceiptV2, ExitCodeV2};
 
     #[test]
     fn verify_transaction_v1() {
@@ -638,14 +632,14 @@ mod test {
                 recipient: [0;32],
                 amount: 1000,
             });
-            Transaction::new(&signer, 0, vec![command], 500000, 8, 0)
+            TransactionV1::new(&signer, 0, vec![command], 500000, 8, 0)
         };
 
         // Verify transaction signature
         assert!(txn.is_cryptographically_correct().is_ok());
 
         // Set another signer key that cannot decompress Edwards point
-        let invalid_txn = Transaction {
+        let invalid_txn = TransactionV1 {
             signer: [5; 32],
             ..txn.clone()
         };
@@ -653,7 +647,7 @@ mod test {
         assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::InvalidSigner)));
 
         // Set invalid signature that cannot decompress Edwards point
-        let invalid_txn = Transaction {
+        let invalid_txn = TransactionV1 {
             signature: [224;64],
             ..txn.clone()
         };
@@ -661,7 +655,7 @@ mod test {
         assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::InvalidSignature)));
 
         // Intensionally set invalid hash
-        let invalid_txn = Transaction {
+        let invalid_txn = TransactionV1 {
             hash: [0;32],
             ..txn.clone()
         };
@@ -671,7 +665,7 @@ mod test {
         // Set another signer with wrong signature
         let mut csprng = OsRng{};
         let wrong_signer: Keypair = Keypair::generate(&mut csprng);
-        let invalid_txn = Transaction {
+        let invalid_txn = TransactionV1 {
             signer: wrong_signer.public.to_bytes(),
             ..txn.clone()
         };
