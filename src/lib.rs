@@ -19,7 +19,7 @@ pub mod cryptography;
 
 pub mod blockchain;
 
-pub mod data;
+pub mod block_data;
 
 pub mod rpc;
 

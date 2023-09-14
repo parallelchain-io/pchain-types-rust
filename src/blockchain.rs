@@ -8,7 +8,7 @@
 use borsh::{BorshSerialize, BorshDeserialize};
 use crate::serialization::{Serializable, Deserializable};
 use crate::cryptography::{Keypair, PublicKey, PublicAddress, SignatureBytes, Signer, Verifier, Sha256Hash, BloomFilter, sha256};
-use crate::{runtime::*, data};
+use crate::{runtime::*, block_data};
 
 /// A data structure that describes and authorizes the execution of a batch of transactions (state transitions) on the blockchain.
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
@@ -49,8 +49,8 @@ impl BlockV2 {
     /// signature of the transactions.
     pub fn from_hotstuff_block(
         block: hotstuff_rs::types::Block, verify_transaction_signatures: bool
-    ) -> Result<BlockV2, data::BlockConversionError> {
-        let blockdata = data::BlockDataV2::from_data(&block.data, verify_transaction_signatures)?;
+    ) -> Result<BlockV2, block_data::BlockConversionError> {
+        let blockdata = block_data::BlockDataV2::from_data(&block.data, verify_transaction_signatures)?;
         Ok(BlockV2{
             header: BlockHeaderV2 {
                 height: block.height,
@@ -618,7 +618,7 @@ mod test {
     use rand::rngs::OsRng;
     use ed25519_dalek::Keypair;
 
-    use crate::{runtime::TransferInput, blockchain::{CryptographicallyIncorrectTransactionError, TransactionV2}, data::{BlockDataV2, BlockHeaderDataV2, DatumIndexV2, BlockConversionError, BlockHeaderConversionError}, serialization::Serializable};
+    use crate::{runtime::TransferInput, blockchain::{CryptographicallyIncorrectTransactionError, TransactionV2}, block_data::{BlockDataV2, BlockHeaderDataV2, DatumIndexV2, BlockConversionError, BlockHeaderConversionError}, serialization::Serializable};
     use super::{Command, TransactionV1, BlockV2, ReceiptV2, ExitCodeV2};
 
     #[test]
