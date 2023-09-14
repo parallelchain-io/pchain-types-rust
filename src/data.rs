@@ -100,7 +100,7 @@ impl DatumIndexV2 {
 
 /// A data structure that can be converted from [hotstuff_rs::types::Data].
 pub struct BlockDataV2 {
-    pub header: BlockDataHeaderV2,
+    pub header: BlockHeaderDataV2,
     pub transactions: Vec<TransactionV2>,
     pub receipts: Vec<ReceiptV2>,
 }
@@ -113,7 +113,7 @@ impl BlockDataV2 {
         verify_transaction_signatures: bool
     ) -> Result<BlockDataV2, BlockConversionError> {
         // Construct BlockDataheader from fixed datum indexes 
-        let header: BlockDataHeaderV2 = BlockDataHeaderV2::try_from(hotstuff_data)
+        let header: BlockHeaderDataV2 = BlockHeaderDataV2::try_from(hotstuff_data)
             .map_err(BlockConversionError::WrongHeader)?;
         
         // Construct Transactions and Receipts from dynamic datum indexes
@@ -180,7 +180,7 @@ impl<'a> TryFrom<&'a Data> for BlockDataV2 {
 
 /// A data structure that encapsulates the data of block header from [hotstuff_rs::types::Data].
 #[derive(Clone, BorshSerialize, BorshDeserialize)]
-pub struct BlockDataHeaderV2 {
+pub struct BlockHeaderDataV2 {
     pub chain_id: hotstuff_rs::types::ChainID,
     pub proposer: PublicAddress,
     pub timestamp: u32,
@@ -191,15 +191,15 @@ pub struct BlockDataHeaderV2 {
     pub state_hash: Sha256Hash,
     pub log_bloom: BloomFilter,
 }
-impl Serializable for BlockDataHeaderV2 { }
+impl Serializable for BlockHeaderDataV2 { }
 
-impl BlockDataHeaderV2 {
+impl BlockHeaderDataV2 {
     pub fn hash(&self) -> hotstuff_rs::types::CryptoHash {
         sha256(self.try_to_vec().unwrap())
     }
 }
 
-impl TryFrom<&Data> for BlockDataHeaderV2 {
+impl TryFrom<&Data> for BlockHeaderDataV2 {
     type Error = BlockHeaderConversionError;
 
     fn try_from(data_slice: &Data) -> Result<Self, Self::Error> {
@@ -246,7 +246,7 @@ impl TryFrom<&Data> for BlockDataHeaderV2 {
             .map_err(|_| BlockHeaderConversionError::LogBloom)?;
 
 
-        Ok(BlockDataHeaderV2 {
+        Ok(BlockHeaderDataV2 {
             chain_id,
             proposer,
             timestamp,
@@ -285,8 +285,8 @@ pub enum BlockHeaderConversionError {
     LogBloom,
 }
 
-impl From<BlockDataHeaderV2> for Data {
-    fn from(value: BlockDataHeaderV2) -> Data {
+impl From<BlockHeaderDataV2> for Data {
+    fn from(value: BlockHeaderDataV2) -> Data {
         let mut buf = vec![Vec::new(); DatumIndexV2::BlockHeaderSize as usize];
         DatumIndexV2::set_chain_id(&mut buf, value.chain_id.to_le_bytes().to_vec());
         DatumIndexV2::set_proposer(&mut buf, value.proposer.to_vec());

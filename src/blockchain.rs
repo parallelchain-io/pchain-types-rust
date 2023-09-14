@@ -335,7 +335,8 @@ impl TransactionV2 {
             Serializable::serialize(&gas_limit),
             Serializable::serialize(&max_base_fee_per_gas),
             Serializable::serialize(&priority_fee_per_gas),
-        ].concat();
+        ]
+        .concat();
 
         let signature = keypair.sign(&msg_to_sign);
         
@@ -376,7 +377,8 @@ impl TransactionV2 {
             Serializable::serialize(&self.gas_limit),
             Serializable::serialize(&self.max_base_fee_per_gas),
             Serializable::serialize(&self.priority_fee_per_gas),
-        ].concat();
+        ]
+        .concat();
 
         public_key.verify(&signed_msg, &signature).map_err(|_| CryptographicallyIncorrectTransactionError::WrongSignature)?;
 
@@ -622,7 +624,7 @@ mod test {
     use rand::rngs::OsRng;
     use ed25519_dalek::Keypair;
 
-    use crate::{runtime::TransferInput, blockchain::{CryptographicallyIncorrectTransactionError, TransactionV2}, data::{BlockDataV2, BlockDataHeaderV2, DatumIndexV2, BlockConversionError, BlockHeaderConversionError}, serialization::Serializable};
+    use crate::{runtime::TransferInput, blockchain::{CryptographicallyIncorrectTransactionError, TransactionV2}, data::{BlockDataV2, BlockHeaderDataV2, DatumIndexV2, BlockConversionError, BlockHeaderConversionError}, serialization::Serializable};
     use super::{Command, Transaction, BlockV2, ReceiptV2, ExitCodeV2};
 
     #[test]
@@ -749,7 +751,7 @@ mod test {
         };
         let block = {
             let block_data = BlockDataV2 {
-                header: BlockDataHeaderV2 {
+                header: BlockHeaderDataV2 {
                     chain_id: 123,
                     base_fee_per_gas: 8, 
                     proposer: [3u8; 32],
