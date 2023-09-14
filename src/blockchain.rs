@@ -60,7 +60,7 @@ impl BlockV2 {
                 chain_id: blockdata.header.chain_id,
                 proposer: blockdata.header.proposer,
                 timestamp: blockdata.header.timestamp,
-                base_fee: blockdata.header.base_fee_per_gas,
+                base_fee_per_gas: blockdata.header.base_fee_per_gas,
                 gas_used: blockdata.header.gas_used,
                 txs_hash: blockdata.header.transactions_hash,
                 receipts_hash: blockdata.header.receipts_hash,
@@ -101,7 +101,7 @@ pub struct BlockHeaderV1 {
     pub timestamp: u32,
 
     /// The (inclusive) minimum number of Grays that a Transaction included in this Block must pay for every Gas used.
-    pub base_fee: u64,
+    pub base_fee_per_gas: u64,
 
     /// The total gas used for producing the block.
     pub gas_used: u64,
@@ -151,7 +151,7 @@ pub struct BlockHeaderV2 {
     pub timestamp: u32,
 
     /// The (inclusive) minimum number of Grays that a Transaction included in this Block must pay for every Gas used.
-    pub base_fee: u64,
+    pub base_fee_per_gas: u64,
 
     /// The total gas used for producing the block.
     pub gas_used: u64,
@@ -780,7 +780,7 @@ mod test {
             assert_eq!(blockv2.header.height, 1234);
             assert_eq!(blockv2.header.chain_id, 123);
             assert_eq!(blockv2.header.proposer, [3u8; 32]);
-            assert_eq!(blockv2.header.base_fee, 8);
+            assert_eq!(blockv2.header.base_fee_per_gas, 8);
             assert_eq!(blockv2.header.gas_used, 100);
             assert_eq!(blockv2.header.justify.chain_id, 123);
             assert_eq!(blockv2.header.justify.view, 2);
@@ -867,7 +867,7 @@ mod test {
         DatumIndexV2::set_base_fee_per_gas(&mut invalid_block.data, Vec::new());
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::BaseFee))
+            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::BaseFeePerGas))
         ));
         // - gas_used
         let mut invalid_block = block.clone();

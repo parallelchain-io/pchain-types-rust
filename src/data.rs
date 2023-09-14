@@ -234,7 +234,7 @@ impl TryFrom<&Data> for BlockHeaderDataV2 {
         let base_fee_per_gas = u64::from_le_bytes(
             DatumIndexV2::base_fee_per_gas(data_slice)
                 .try_into()
-                .map_err(|_| BlockHeaderConversionError::BaseFee)?,
+                .map_err(|_| BlockHeaderConversionError::BaseFeePerGas)?,
         );
         let gas_used = u64::from_le_bytes(
             DatumIndexV2::gas_used(data_slice)
@@ -277,8 +277,8 @@ pub enum BlockHeaderConversionError {
     StateHash,
     /// Fail to convert bytes into Receipt Hash
     ReceiptsHash,
-    /// Fail to convert bytes into Base Fee
-    BaseFee,
+    /// Fail to convert bytes into Base Fee Per Gas
+    BaseFeePerGas,
     /// Fail to convert bytes into Gas Used
     GasUsed,
     /// Fail to convert bytes into Logs Bloom
