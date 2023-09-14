@@ -29,7 +29,7 @@ pub enum DatumIndexV2 {
     TransactionsHash,
     ReceiptsHash,
     StateHash,
-    LogBloom,
+    LogsBloom,
     /// Number of Datum for block header
     BlockHeaderSize,
     // The following data are indexed dynamically:
@@ -72,7 +72,7 @@ impl DatumIndexV2 {
     datum_index_getter_setter!(TransactionsHash, transactions_hash, set_transactions_hash);
     datum_index_getter_setter!(ReceiptsHash, receipts_hash, set_receipts_hash);
     datum_index_getter_setter!(StateHash, state_hash, set_state_hash);
-    datum_index_getter_setter!(LogBloom, log_bloom, set_log_bloom);
+    datum_index_getter_setter!(LogsBloom, logs_bloom, set_logs_bloom);
 
     /// Start index of the datum transaction
     pub const fn transactions_start_index() -> usize {
@@ -189,7 +189,7 @@ pub struct BlockHeaderDataV2 {
     pub transactions_hash: Sha256Hash,
     pub receipts_hash: Sha256Hash,
     pub state_hash: Sha256Hash,
-    pub log_bloom: BloomFilter,
+    pub logs_bloom: BloomFilter,
 }
 impl Serializable for BlockHeaderDataV2 { }
 
@@ -241,9 +241,9 @@ impl TryFrom<&Data> for BlockHeaderDataV2 {
                 .try_into()
                 .map_err(|_| BlockHeaderConversionError::GasUsed)?,
         );
-        let log_bloom = DatumIndexV2::log_bloom(data_slice)
+        let logs_bloom = DatumIndexV2::logs_bloom(data_slice)
             .try_into()
-            .map_err(|_| BlockHeaderConversionError::LogBloom)?;
+            .map_err(|_| BlockHeaderConversionError::LogsBloom)?;
 
 
         Ok(BlockHeaderDataV2 {
@@ -255,7 +255,7 @@ impl TryFrom<&Data> for BlockHeaderDataV2 {
             receipts_hash,
             base_fee_per_gas,
             gas_used,
-            log_bloom,
+            logs_bloom,
         })
     }
 }
@@ -281,8 +281,8 @@ pub enum BlockHeaderConversionError {
     BaseFee,
     /// Fail to convert bytes into Gas Used
     GasUsed,
-    /// Fail to convert bytes into Log Bloom
-    LogBloom,
+    /// Fail to convert bytes into Logs Bloom
+    LogsBloom,
 }
 
 impl From<BlockHeaderDataV2> for Data {
@@ -296,7 +296,7 @@ impl From<BlockHeaderDataV2> for Data {
         DatumIndexV2::set_receipts_hash(&mut buf, value.receipts_hash.to_vec());
         DatumIndexV2::set_base_fee_per_gas(&mut buf, value.base_fee_per_gas.to_le_bytes().to_vec());
         DatumIndexV2::set_gas_used(&mut buf, value.gas_used.to_le_bytes().to_vec());
-        DatumIndexV2::set_log_bloom(&mut buf, value.log_bloom.to_vec());
+        DatumIndexV2::set_logs_bloom(&mut buf, value.logs_bloom.to_vec());
         buf
     }
 

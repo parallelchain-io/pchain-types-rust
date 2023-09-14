@@ -65,7 +65,7 @@ impl BlockV2 {
                 txs_hash: blockdata.header.transactions_hash,
                 receipts_hash: blockdata.header.receipts_hash,
                 state_hash: blockdata.header.state_hash,
-                log_bloom: blockdata.header.log_bloom
+                logs_bloom: blockdata.header.logs_bloom
             },
             transactions: blockdata.transactions,
             receipts: blockdata.receipts
@@ -116,8 +116,8 @@ pub struct BlockHeaderV1 {
     /// Trie (MPT) after executing all of this Block’s Transactions
     pub state_hash: Sha256Hash,
 
-    /// Log Bloom, the 256-byte Block-level Bloom Filter union of all the Bloom Filters of each Log topic from the Block’s Receipts
-    pub log_bloom: BloomFilter,
+    /// Logs Bloom, the 256-byte Block-level Bloom Filter union of all the Bloom Filters of each Log topic from the Block’s Receipts
+    pub logs_bloom: BloomFilter,
 }
 
 /// Block header defines meta information of a block, including evidence for verifying validity of the block.
@@ -166,8 +166,8 @@ pub struct BlockHeaderV2 {
     /// Trie (MPT) after executing all of this Block’s Transactions
     pub state_hash: Sha256Hash,
 
-    /// Log Bloom, the 256-byte Block-level Bloom Filter union of all the Bloom Filters of each Log topic from the Block’s Receipts
-    pub log_bloom: BloomFilter,
+    /// Logs Bloom, the 256-byte Block-level Bloom Filter union of all the Bloom Filters of each Log topic from the Block’s Receipts
+    pub logs_bloom: BloomFilter,
 }
 
 /// Digitally signed instructions that tell the ParallelChain state machine to execute a sequence of [commands](Command). 
@@ -754,7 +754,7 @@ mod test {
                     transactions_hash: [45u8; 32],
                     receipts_hash: [56u8; 32],
                     state_hash: [99u8; 32],
-                    log_bloom: [11u8; 256]
+                    logs_bloom: [11u8; 256]
                 },
                 transactions: vec![transaction.clone()],
                 receipts: vec![receipt.clone()]
@@ -792,7 +792,7 @@ mod test {
             assert_eq!(blockv2.header.receipts_hash, [56u8; 32]);
             assert_eq!(blockv2.header.state_hash, [99u8; 32]);
             assert_eq!(blockv2.header.data_hash, [45u8; 32]);
-            assert_eq!(blockv2.header.log_bloom, [11u8; 256]);
+            assert_eq!(blockv2.header.logs_bloom, [11u8; 256]);
             assert_eq!(blockv2.header.hash, block_hash_computed_from_hotstuff_rs);
     
             assert_eq!(blockv2.transactions.first().unwrap(), &transaction);
@@ -904,12 +904,12 @@ mod test {
             BlockV2::from_hotstuff_block(invalid_block, false),
             Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::StateHash))
         ));
-        // - log_bloom
+        // - logs_bloom
         let mut invalid_block = block.clone();
-        DatumIndexV2::set_log_bloom(&mut invalid_block.data, Vec::new());
+        DatumIndexV2::set_logs_bloom(&mut invalid_block.data, Vec::new());
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::LogBloom))
+            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::LogsBloom))
         ));
     }
 }
