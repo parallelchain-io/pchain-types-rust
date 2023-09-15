@@ -53,7 +53,7 @@ pub enum SubmitTransactionErrorV2 {
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct SubscribeToTransactionEventsRequest {
-    pub filter: Option<Filter>,
+    pub filter: Option<TransactionEventsFilter>,
 }
 
 /// Get a transaction and optionally its receipt.
@@ -140,7 +140,7 @@ pub enum ReceiptV1ToV2 {
 
 /// A Filter used in the RPC Request [SubscribeToTransactionEventsRequest].
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-pub enum Filter {
+pub enum TransactionEventsFilter {
     ByTransactionHash(HashSet<CryptoHash>),
     BySigner(HashSet<PublicAddress>),
 }
