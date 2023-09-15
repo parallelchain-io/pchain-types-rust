@@ -19,7 +19,7 @@ hex = "0.4.3"
 rand = "0.7"
 
 [dependencies]
-borsh = "=0.10.2"
+borsh = "0.10.2"
 ed25519-dalek = "1.0.1"
 ethbloom = "0.13"
 hotstuff_rs = { version = "0.2", git = "https://github.com/parallelchain-io/hotstuff_rs" }
