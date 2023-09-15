@@ -23,12 +23,12 @@ pub enum DatumIndexV1 {
     ChainID = 0,
     Proposer,
     Timestamp,
-    TxnsHash,
+    TransactionsHash,
     StateHash,
-    ReceiptHash,
-    BaseFee,
+    ReceiptsHash,
+    BaseFeePerGas,
     GasUsed,
-    LogBloom,
+    LogsBloom,
     /// Number of Datum for block header
     BlockHeaderSize,
     // The following data are indexed dynamically:
@@ -73,15 +73,15 @@ pub enum DatumIndexV2 {
 /// as [hotstuff_rs::types::Data]. It is not good to directly index on an arbitrary vector of
 /// bytes by the Enum directly in other code place.
 macro_rules! datum_index_getter_setter {
-    ($t:tt, $g:ident, $s:ident) => {
+    ($enum_name:tt, $getter_fn_name:ident, $setter_fn_name:ident) => {
         /// Get the value from a slot at the corresponding datum index
-        pub fn $g (hotstuff_data: &Data) -> &[u8] {
-            hotstuff_data[DatumIndexV2::$t as usize].as_slice()
+        pub fn $getter_fn_name (hotstuff_data: &Data) -> &[u8] {
+            hotstuff_data[Self::$enum_name as usize].as_slice()
         }
 
         /// Set the value into a slot at the corresponding datum index
-        pub fn $s (hotstuff_data: &mut Data, value: Vec<u8>) {
-            hotstuff_data[DatumIndexV2::$t as usize] = value;
+        pub fn $setter_fn_name (hotstuff_data: &mut Data, value: Vec<u8>) {
+            hotstuff_data[Self::$enum_name as usize] = value;
         }
     };
 }
@@ -406,7 +406,7 @@ pub enum BlockHeaderDataFromHotStuffDataError {
     TxnsHash,
     /// Fail to convert bytes into State Hash
     StateHash,
-    /// Fail to convert bytes into Receipt Hash
+    /// Fail to convert bytes into Receipts Hash
     ReceiptsHash,
     /// Fail to convert bytes into Base Fee Per Gas
     BaseFeePerGas,
