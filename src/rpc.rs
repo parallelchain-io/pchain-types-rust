@@ -145,6 +145,48 @@ pub enum TransactionEventsFilter {
     BySigner(HashSet<PublicAddress>),
 }
 
+/// Enumerates the events which indicate the thing happened to a Transaction.
+/// It is part of a RPC response from a Notification WebSocket.
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub enum TransactionEvent {
+    Received,
+    InsertedToMempool,
+    RejectedFromMempool(RejectedFromMempoolReason),
+    RemovedFromMempool(RemovedFromMempoolReason),
+    PoppedToExecutor,
+    IncludedInBlock,
+    RejectedFromBlock(RejectedFromBlockReason),
+    BlockPruned,
+    BlockCommitted(CryptoHash),
+}
+
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub enum RejectedFromMempoolReason {
+    NonceLTCommitted,
+    BaseFeePerGasTooLow,
+    MempoolIsFull,
+    DuplicateSignerAndNonce,
+    Other,
+}
+
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub enum RemovedFromMempoolReason {
+    NonceLTCommitted,
+    BaseFeePerGasTooLow,
+    MempoolIsFull,
+    ReplacedByDuplicateSignerAndNonce,
+    Other,
+}
+
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub enum RejectedFromBlockReason {
+    NonceLTCommitted,
+    NonceNESpeculative,
+    BaseFeePerGasTooLow,
+    BalanceLTInclusionCost,
+    Other,
+}
+
 /* Block RPCs */
 
 /// Get a block by its block hash.
@@ -342,7 +384,6 @@ pub type Operator = PublicAddress;
 pub type Owner = PublicAddress;
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-
 pub struct PoolWithDelegators {
     pub operator: PublicAddress,
     pub power: u64,
@@ -390,6 +431,11 @@ macro_rules! define_serde {
 define_serde!(
     SubmitTransactionRequestV1, SubmitTransactionResponseV1,
     SubmitTransactionRequestV2, SubmitTransactionResponseV2,
+    SubmitTransactionErrorV1, SubmitTransactionErrorV2,
+
+    SubscribeToTransactionEventsRequest,
+    TransactionEvent,
+
     TransactionRequest, TransactionResponseV1, TransactionResponseV2,
     TransactionPositionRequest, TransactionPositionResponse, 
     ReceiptRequest, ReceiptResponseV1, ReceiptResponseV2,
@@ -398,12 +444,11 @@ define_serde!(
     BlockHeightByHashRequest, BlockHeightByHashResponse,
     BlockHashByHeightRequest, BlockHashByHeightResponse,
     HighestCommittedBlockResponse,
+
     StateRequest, StateResponse,
     ValidatorSetsRequest, ValidatorSetsResponse,
     PoolsRequest, PoolsResponse,
     StakesRequest, StakesResponse,
     DepositsRequest, DepositsResponse,
-    ViewRequest, ViewResponseV1, ViewResponseV2,
-
-    BlockV1ToV2, TransactionV1OrV2, TransactionV1ToV2, ReceiptV1ToV2
+    ViewRequest, ViewResponseV1, ViewResponseV2
 );
