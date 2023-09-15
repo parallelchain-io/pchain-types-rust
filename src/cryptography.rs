@@ -68,12 +68,12 @@ pub fn contract_address_v1(signer: &PublicAddress, nonce: u64) -> PublicAddress 
 /// [V1](contract_address_v1) -> V2:
 /// - Contract address is to be a function of the `index` of the deploy command
 /// in a transaction submitted by the `signer` with nonce = `nonce`.
-pub fn contract_address_v2(signer: &PublicAddress, nonce: u64, index: u32) -> PublicAddress {
+pub fn contract_address_v2(signer: &PublicAddress, nonce: u64, cmd_index: u32) -> PublicAddress {
     let mut hasher = Sha256::new();
     let mut pre_image = Vec::new();
     pre_image.extend(signer);
     pre_image.extend(nonce.to_le_bytes().to_vec());
-    pre_image.extend(index.to_le_bytes().to_vec());
+    pre_image.extend(cmd_index.to_le_bytes().to_vec());
 
     hasher.update(pre_image);
 
