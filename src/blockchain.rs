@@ -49,7 +49,7 @@ impl BlockV2 {
     /// signature of the transactions.
     pub fn from_hotstuff_block(
         block: hotstuff_rs::types::Block, verify_transaction_signatures: bool
-    ) -> Result<BlockV2, block_data::BlockConversionError> {
+    ) -> Result<BlockV2, block_data::BlockDataFromHotStuffDataError> {
         let blockdata = block_data::BlockDataV2::from_data(&block.data, verify_transaction_signatures)?;
         Ok(BlockV2{
             header: BlockHeaderV2 {
@@ -618,7 +618,7 @@ mod test {
     use rand::rngs::OsRng;
     use ed25519_dalek::Keypair;
 
-    use crate::{runtime::TransferInput, blockchain::{CryptographicallyIncorrectTransactionError, TransactionV2}, block_data::{BlockDataV2, BlockHeaderDataV2, DatumIndexV2, BlockConversionError, BlockHeaderConversionError}, serialization::Serializable};
+    use crate::{runtime::TransferInput, blockchain::{CryptographicallyIncorrectTransactionError, TransactionV2}, block_data::{BlockDataV2, BlockHeaderDataV2, DatumIndexV2, BlockDataFromHotStuffDataError, BlockHeaderDataFromHotStuffDataError}, serialization::Serializable};
     use super::{Command, TransactionV1, BlockV2, ReceiptV2, ExitCodeV2};
 
     #[test]
@@ -818,7 +818,7 @@ mod test {
             },
             None => panic!("cannot find the first transaction in block data!")
         }
-        assert!(matches!(BlockV2::from_hotstuff_block(invalid_block, true),Err(BlockConversionError::InvalidTransactionSignature)));
+        assert!(matches!(BlockV2::from_hotstuff_block(invalid_block, true),Err(BlockDataFromHotStuffDataError::InvalidTransactionSignature)));
 
         // Verify transaction integrity
         let mut invalid_block = block.clone();
@@ -828,7 +828,7 @@ mod test {
             },
             None => panic!("cannot find the first transaction in block data!")
         }
-        assert!(matches!(BlockV2::from_hotstuff_block(invalid_block, false),Err(BlockConversionError::Transaction)));
+        assert!(matches!(BlockV2::from_hotstuff_block(invalid_block, false),Err(BlockDataFromHotStuffDataError::Transaction)));
 
         // Verify receipt integrity
         let mut invalid_block = block.clone();
@@ -838,7 +838,7 @@ mod test {
             },
             None => panic!("cannot find the first receipt in block data!")
         }
-        assert!(matches!(BlockV2::from_hotstuff_block(invalid_block, false),Err(BlockConversionError::Receipt)));
+        assert!(matches!(BlockV2::from_hotstuff_block(invalid_block, false),Err(BlockDataFromHotStuffDataError::Receipt)));
 
         // Verify block header integrity
         // - Number of Slots
@@ -846,70 +846,70 @@ mod test {
         invalid_block.data = Vec::new();
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::NumberOfSlots))
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::NumberOfSlots))
         ));
         // - chain id
         let mut invalid_block = block.clone();
         DatumIndexV2::set_chain_id(&mut invalid_block.data, Vec::new());
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::ChainID))
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::ChainID))
         ));
         // - proposer
         let mut invalid_block = block.clone();
         DatumIndexV2::set_proposer(&mut invalid_block.data, Vec::new());
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::Proposer))
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::Proposer))
         ));
         // - base_fee_per_gas
         let mut invalid_block = block.clone();
         DatumIndexV2::set_base_fee_per_gas(&mut invalid_block.data, Vec::new());
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::BaseFeePerGas))
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::BaseFeePerGas))
         ));
         // - gas_used
         let mut invalid_block = block.clone();
         DatumIndexV2::set_gas_used(&mut invalid_block.data, Vec::new());
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::GasUsed))
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::GasUsed))
         ));
         // - timestamp
         let mut invalid_block = block.clone();
         DatumIndexV2::set_timestamp(&mut invalid_block.data, Vec::new());
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::Timestamp))
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::Timestamp))
         ));
         // - transactions_hash
         let mut invalid_block = block.clone();
         DatumIndexV2::set_transactions_hash(&mut invalid_block.data, Vec::new());
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::TxsHash))
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::TxsHash))
         ));
         // - receipts_hash
         let mut invalid_block = block.clone();
         DatumIndexV2::set_receipts_hash(&mut invalid_block.data, Vec::new());
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::ReceiptsHash))
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::ReceiptsHash))
         ));
         // - state_hash
         let mut invalid_block = block.clone();
         DatumIndexV2::set_state_hash(&mut invalid_block.data, Vec::new());
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::StateHash))
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::StateHash))
         ));
         // - logs_bloom
         let mut invalid_block = block.clone();
         DatumIndexV2::set_logs_bloom(&mut invalid_block.data, Vec::new());
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockConversionError::WrongHeader(BlockHeaderConversionError::LogsBloom))
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::LogsBloom))
         ));
     }
 }

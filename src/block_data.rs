@@ -162,24 +162,24 @@ macro_rules! block_data_impls_v1_to_v2 {
             pub fn from_data(
                 hotstuff_data: &Data,
                 verify_transaction_signatures: bool
-            ) -> Result<$block_data, BlockConversionError> {
+            ) -> Result<$block_data, BlockDataFromHotStuffDataError> {
                 // Construct BlockHeaderData from fixed datum indexes 
                 let header = $block_header_data::try_from(hotstuff_data)
-                    .map_err(BlockConversionError::WrongHeader)?;
+                    .map_err(BlockDataFromHotStuffDataError::WrongHeader)?;
                 
                 // Construct Transactions and Receipts from dynamic datum indexes
                 let (txns_bs, receipts_bs) = $datum_index::transactions_and_receipts(hotstuff_data)
-                    .ok_or(BlockConversionError::IncorrectNumberOfTxsAndReceipts)?;
+                    .ok_or(BlockDataFromHotStuffDataError::IncorrectNumberOfTxsAndReceipts)?;
         
                 // Deserialize transactions (and validate the signatures)
                 let mut transactions = Vec::with_capacity(txns_bs.len());
                 for txn_bs in txns_bs {
                     let txn: $transaction = Deserializable::deserialize(txn_bs)
-                        .map_err(|_| BlockConversionError::Transaction)?;
+                        .map_err(|_| BlockDataFromHotStuffDataError::Transaction)?;
                     // Check transactions signature and return error immediately if there is an invalid transaction.
                     if verify_transaction_signatures {
                         txn.is_cryptographically_correct()
-                            .map_err(|_| BlockConversionError::InvalidTransactionSignature)?;
+                            .map_err(|_| BlockDataFromHotStuffDataError::InvalidTransactionSignature)?;
                     }
                     transactions.push(txn);
                 }
@@ -189,7 +189,7 @@ macro_rules! block_data_impls_v1_to_v2 {
                 for receipt_bs in receipts_bs {
                     receipts.push(
                         Deserializable::deserialize(receipt_bs)
-                            .map_err(|_| BlockConversionError::Receipt)?,
+                            .map_err(|_| BlockDataFromHotStuffDataError::Receipt)?,
                     )
                 }
         
@@ -222,7 +222,7 @@ macro_rules! block_data_impls_v1_to_v2 {
         }
 
         impl<'a> TryFrom<&'a Data> for $block_data {
-            type Error = BlockConversionError;
+            type Error = BlockDataFromHotStuffDataError;
             fn try_from(data: &'a Data) -> std::result::Result<Self, Self::Error> {
                 $block_data::from_data(data, true)
             }
@@ -309,50 +309,50 @@ macro_rules! block_header_data_v1_to_v2 {
     ($block_header_data:tt, $datum_index:tt) => {
 
         impl TryFrom<&Data> for $block_header_data {
-            type Error = BlockHeaderConversionError;
+            type Error = BlockHeaderDataFromHotStuffDataError;
         
             fn try_from(data_slice: &Data) -> Result<Self, Self::Error> {
                 // Check if there is the correct number of slots.
                 if data_slice.len() < $datum_index::BlockHeaderSize as usize {
-                    return Err(BlockHeaderConversionError::NumberOfSlots);
+                    return Err(BlockHeaderDataFromHotStuffDataError::NumberOfSlots);
                 }
         
                 // Check if each slot is of the correct length.
                 let chain_id = u64::from_le_bytes(
                     $datum_index::chain_id(data_slice)
                         .try_into()
-                        .map_err(|_| BlockHeaderConversionError::ChainID)?,
+                        .map_err(|_| BlockHeaderDataFromHotStuffDataError::ChainID)?,
                 );
                 let proposer = $datum_index::proposer(data_slice)
                     .try_into()
-                    .map_err(|_| BlockHeaderConversionError::Proposer)?;
+                    .map_err(|_| BlockHeaderDataFromHotStuffDataError::Proposer)?;
                 let timestamp = u32::from_le_bytes(
                     $datum_index::timestamp(data_slice)
                         .try_into()
-                        .map_err(|_| BlockHeaderConversionError::Timestamp)?,
+                        .map_err(|_| BlockHeaderDataFromHotStuffDataError::Timestamp)?,
                 );
                 let transactions_hash = $datum_index::transactions_hash(data_slice)
                     .try_into()
-                    .map_err(|_| BlockHeaderConversionError::TxsHash)?;
+                    .map_err(|_| BlockHeaderDataFromHotStuffDataError::TxsHash)?;
                 let state_hash = $datum_index::state_hash(data_slice)
                     .try_into()
-                    .map_err(|_| BlockHeaderConversionError::StateHash)?;
+                    .map_err(|_| BlockHeaderDataFromHotStuffDataError::StateHash)?;
                 let receipts_hash = $datum_index::receipts_hash(data_slice)
                     .try_into()
-                    .map_err(|_| BlockHeaderConversionError::ReceiptsHash)?;
+                    .map_err(|_| BlockHeaderDataFromHotStuffDataError::ReceiptsHash)?;
                 let base_fee_per_gas = u64::from_le_bytes(
                     $datum_index::base_fee_per_gas(data_slice)
                         .try_into()
-                        .map_err(|_| BlockHeaderConversionError::BaseFeePerGas)?,
+                        .map_err(|_| BlockHeaderDataFromHotStuffDataError::BaseFeePerGas)?,
                 );
                 let gas_used = u64::from_le_bytes(
                     $datum_index::gas_used(data_slice)
                         .try_into()
-                        .map_err(|_| BlockHeaderConversionError::GasUsed)?,
+                        .map_err(|_| BlockHeaderDataFromHotStuffDataError::GasUsed)?,
                 );
                 let logs_bloom = $datum_index::logs_bloom(data_slice)
                     .try_into()
-                    .map_err(|_| BlockHeaderConversionError::LogsBloom)?;
+                    .map_err(|_| BlockHeaderDataFromHotStuffDataError::LogsBloom)?;
         
         
                 Ok($block_header_data {
@@ -393,7 +393,7 @@ block_header_data_v1_to_v2!(BlockHeaderDataV2, DatumIndexV2);
 
 /// Enumerates errors in conversion from HotStuffData to BlockDataHeader.
 #[derive(Debug)]
-pub enum BlockHeaderConversionError {
+pub enum BlockHeaderDataFromHotStuffDataError {
     /// Wrong number of slice of bytes
     NumberOfSlots,
     /// Fail to convert bytes into Chain ID
@@ -418,9 +418,9 @@ pub enum BlockHeaderConversionError {
 
 /// Enumerates errors in conversion from HotStuffData to BlockData.
 #[derive(Debug)]
-pub enum BlockConversionError {
+pub enum BlockDataFromHotStuffDataError {
     /// Fail to convert Block Header.
-    WrongHeader(BlockHeaderConversionError),
+    WrongHeader(BlockHeaderDataFromHotStuffDataError),
     /// Wrong number of slice of bytes. It should contain equal number of transactions
     /// and receipts.
     IncorrectNumberOfTxsAndReceipts,
