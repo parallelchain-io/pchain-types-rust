@@ -110,8 +110,8 @@ macro_rules! datum_index_impl_v1_to_v2 {
 
             /// Start index of the datum receipt. It depends on the length of the transactions
             /// in the data.
-            pub const fn receipts_start_index(txn_len: usize) -> usize {
-                Self::BlockHeaderSize as usize + txn_len
+            pub const fn receipts_start_index(num_txns: usize) -> usize {
+                Self::BlockHeaderSize as usize + num_txns
             }
 
             /// Returns the slice of the datum which is the serialized transaction and receipt.
