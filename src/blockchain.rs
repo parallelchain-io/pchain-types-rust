@@ -3,7 +3,7 @@
     Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 */
 
-//! Types which appear in blocks like [transactions](Transaction) and [receipts](Receipt), and also [blocks](Block) themselves.
+//! Types which appear in blocks like transactions and receipts, and also blocks themselves.
 
 use borsh::{BorshSerialize, BorshDeserialize};
 use crate::serialization::{Serializable, Deserializable};
@@ -428,7 +428,7 @@ pub type ReceiptV1 = Vec<CommandReceiptV1>;
 
 /// Receipt defines the result of transaction execution.
 /// 
-/// [V1](Receipt) -> V2: 
+/// [V1](ReceiptV1) -> V2: 
 /// - Add Gas Used
 /// - Add Exit Code
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]

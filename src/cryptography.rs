@@ -44,6 +44,8 @@ pub use ed25519_dalek::Signer;
 /// Implemented by [Keypair] and [PublicKey] to cryptographically [Verifier::verify] arbitrary bytesequences.
 pub use ed25519_dalek::Verifier;
 
+use crate::blockchain::ReceiptV1;
+use crate::blockchain::ReceiptV2;
 use crate::blockchain::TransactionV1;
 use crate::blockchain::TransactionV2;
 use crate::serialization::Serializable;
@@ -125,11 +127,36 @@ pub fn txns_hash_v1(txns: impl AsRef<[TransactionV1]>) -> Sha256Hash {
 
 /// Compute Transactions Hash which refers to the field `txns_hash` in [crate::blockchain::BlockHeaderV2]
 /// in ParallelChain Protocol V0.5.
+/// 
+/// [V1](txns_hash_v1) -> V2:
+/// - Only the field `hash` in a Transaction is used for computing `txns_hash` in block header.
 pub fn txns_hash_v2(txns: impl AsRef<[TransactionV2]>) -> Sha256Hash {
     let leaves: Vec<Sha256Hash> = txns
         .as_ref()
         .iter()
         .map(|txn| txn.hash )
+        .collect();
+    merkle_root(leaves)
+}
+
+/// Compute Receipts Hash which refers to the field `receipts_hash` in [crate::blockchain::BlockHeaderV1]
+/// in ParallelChain Protocol V0.4.
+pub fn receipts_hash_v1(receipts: impl AsRef<[ReceiptV1]>) -> Sha256Hash {
+    let leaves: Vec<Vec<u8>> = receipts
+        .as_ref()
+        .iter()
+        .map(Serializable::serialize)
+        .collect();
+    merkle_root(leaves)
+}
+
+/// Compute Receipts Hash which refers to the field `receipts_hash` in [crate::blockchain::BlockHeaderV2]
+/// in ParallelChain Protocol V0.5.
+pub fn receipts_hash_v2(receipts: impl AsRef<[ReceiptV2]>) -> Sha256Hash {
+    let leaves: Vec<Vec<u8>> = receipts
+        .as_ref()
+        .iter()
+        .map(Serializable::serialize)
         .collect();
     merkle_root(leaves)
 }
@@ -140,8 +167,8 @@ pub type BloomFilter = [u8; 256];
 #[cfg(test)]
 mod test {
     use sha2::{Sha256, Digest};
-    use crate::{cryptography::{contract_address_v1, contract_address_v2, txns_hash_v2}, blockchain::{TransactionV1, TransactionV2}};
-    use super::{PublicAddress, merkle_root, txns_hash_v1};
+    use crate::{cryptography::{contract_address_v1, contract_address_v2, txns_hash_v2, receipts_hash_v2}, blockchain::{TransactionV1, TransactionV2, CommandReceiptV1, ExitCodeV1, CommandReceiptV2, ReceiptV2, ExitCodeV2, NextEpochReceipt, TransferReceipt}};
+    use super::{PublicAddress, merkle_root, txns_hash_v1, receipts_hash_v1};
 
     #[test]
     fn compute_contract_address() {
@@ -255,6 +282,73 @@ mod test {
 
         // Verify the difference of txns_hash_v1 and txns_hash_v2
         assert_ne!(txns_hash_v1(&[txn_v1_a.clone()]), txns_hash_v2(&[txn_v2_a.clone()]));
+    }
+
+    #[test]
+    fn compute_receipts_hash() {
+        let recp_v1_a = vec![
+            CommandReceiptV1 {
+                logs: Vec::new(),
+                return_values: Vec::new(),
+                gas_used: 0,
+                exit_code: ExitCodeV1::Success,
+            }
+        ];
+        let recp_v1_b = vec![
+            CommandReceiptV1 {
+                logs: Vec::new(),
+                return_values: Vec::new(),
+                gas_used: 0,
+                exit_code: ExitCodeV1::Success,
+            },
+            CommandReceiptV1 {
+                logs: Vec::new(),
+                return_values: Vec::new(),
+                gas_used: 100_000,
+                exit_code: ExitCodeV1::Failed,
+            },
+        ];
+
+        let recp_v2_a = ReceiptV2 {
+            gas_used: 0,
+            exit_code: ExitCodeV2::Ok,
+            command_receipts: vec![
+                CommandReceiptV2::NextEpoch(NextEpochReceipt{
+                    gas_used: 0,
+                    exit_code: ExitCodeV2::Ok,
+                })
+            ]
+        };
+        let recp_v2_b = ReceiptV2 {
+            gas_used: 100_000,
+            exit_code: ExitCodeV2::Ok,
+            command_receipts: vec![
+                CommandReceiptV2::NextEpoch(NextEpochReceipt{
+                    gas_used: 0,
+                    exit_code: ExitCodeV2::Ok,
+                }),
+                CommandReceiptV2::Transfer(TransferReceipt{
+                    gas_used: 100_000,
+                    exit_code: ExitCodeV2::Error,
+                })
+            ]
+        };
+
+        // Verify receipts_hash_v1
+        // - difference in number of receipts
+        assert_ne!(receipts_hash_v1(&[]), receipts_hash_v1(&[recp_v1_a.clone()]));
+        // - difference in receipt content
+        assert_ne!(receipts_hash_v1(&[recp_v1_a.clone()]), receipts_hash_v1(&[recp_v1_b.clone()]));
+
+        // Verify receipts_hash_v2
+        // - difference in number of receipts
+        assert_ne!(receipts_hash_v2(&[]), receipts_hash_v2(&[recp_v2_a.clone()]));
+        // - difference in receipt content
+        assert_ne!(receipts_hash_v2(&[recp_v2_a.clone()]), receipts_hash_v2(&[recp_v2_b.clone()]));
+
+        // Verify the difference of receipts_hash_v1 and receipts_hash_v2
+        assert_eq!(receipts_hash_v1(&[]), receipts_hash_v2(&[]));
+        assert_ne!(receipts_hash_v1(&[recp_v1_a.clone()]), receipts_hash_v2(&[recp_v2_a.clone()]))
     }
 
     #[test]
