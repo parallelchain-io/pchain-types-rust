@@ -62,7 +62,7 @@ impl BlockV2 {
                 timestamp: blockdata.header.timestamp,
                 base_fee_per_gas: blockdata.header.base_fee_per_gas,
                 gas_used: blockdata.header.gas_used,
-                txs_hash: blockdata.header.transactions_hash,
+                txns_hash: blockdata.header.transactions_hash,
                 receipts_hash: blockdata.header.receipts_hash,
                 state_hash: blockdata.header.state_hash,
                 logs_bloom: blockdata.header.logs_bloom
@@ -107,7 +107,7 @@ pub struct BlockHeaderV1 {
     pub gas_used: u64,
 
     /// Transactions Hash, the Binary Merkle Tree root hash over the Block’s Transactions
-    pub txs_hash: Sha256Hash,
+    pub txns_hash: Sha256Hash,
 
     /// Receipts Hash, the Binary Merkle Tree root hash over the Block’s Receipts
     pub receipts_hash: Sha256Hash,
@@ -157,7 +157,7 @@ pub struct BlockHeaderV2 {
     pub gas_used: u64,
 
     /// Transactions Hash, the Binary Merkle Tree root hash over the Block’s Transactions
-    pub txs_hash: Sha256Hash,
+    pub txns_hash: Sha256Hash,
 
     /// Receipts Hash, the Binary Merkle Tree root hash over the Block’s Receipts
     pub receipts_hash: Sha256Hash,
@@ -788,7 +788,7 @@ mod test {
             assert_eq!(blockv2.header.justify.phase, hotstuff_rs::types::Phase::Generic);
             assert_eq!(blockv2.header.justify.signatures, vec![]);
             assert_eq!(blockv2.header.timestamp, 12345678);
-            assert_eq!(blockv2.header.txs_hash, [45u8; 32]);
+            assert_eq!(blockv2.header.txns_hash, [45u8; 32]);
             assert_eq!(blockv2.header.receipts_hash, [56u8; 32]);
             assert_eq!(blockv2.header.state_hash, [99u8; 32]);
             assert_eq!(blockv2.header.data_hash, [45u8; 32]);
@@ -888,7 +888,7 @@ mod test {
         DatumIndexV2::set_transactions_hash(&mut invalid_block.data, Vec::new());
         assert!(matches!(
             BlockV2::from_hotstuff_block(invalid_block, false),
-            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::TxsHash))
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::TxnsHash))
         ));
         // - receipts_hash
         let mut invalid_block = block.clone();

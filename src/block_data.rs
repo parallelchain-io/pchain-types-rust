@@ -23,7 +23,7 @@ pub enum DatumIndexV1 {
     ChainID = 0,
     Proposer,
     Timestamp,
-    TxsHash,
+    TxnsHash,
     StateHash,
     ReceiptHash,
     BaseFee,
@@ -169,7 +169,7 @@ macro_rules! block_data_impls_v1_to_v2 {
                 
                 // Construct Transactions and Receipts from dynamic datum indexes
                 let (txns_bs, receipts_bs) = $datum_index::transactions_and_receipts(hotstuff_data)
-                    .ok_or(BlockDataFromHotStuffDataError::IncorrectNumberOfTxsAndReceipts)?;
+                    .ok_or(BlockDataFromHotStuffDataError::IncorrectNumberOfTxnsAndReceipts)?;
         
                 // Deserialize transactions (and validate the signatures)
                 let mut transactions = Vec::with_capacity(txns_bs.len());
@@ -333,7 +333,7 @@ macro_rules! block_header_data_v1_to_v2 {
                 );
                 let transactions_hash = $datum_index::transactions_hash(data_slice)
                     .try_into()
-                    .map_err(|_| BlockHeaderDataFromHotStuffDataError::TxsHash)?;
+                    .map_err(|_| BlockHeaderDataFromHotStuffDataError::TxnsHash)?;
                 let state_hash = $datum_index::state_hash(data_slice)
                     .try_into()
                     .map_err(|_| BlockHeaderDataFromHotStuffDataError::StateHash)?;
@@ -403,7 +403,7 @@ pub enum BlockHeaderDataFromHotStuffDataError {
     /// Fail to convert bytes into Timestamp
     Timestamp,
     /// Fail to convert bytes into Transactions Hash
-    TxsHash,
+    TxnsHash,
     /// Fail to convert bytes into State Hash
     StateHash,
     /// Fail to convert bytes into Receipt Hash
@@ -423,7 +423,7 @@ pub enum BlockDataFromHotStuffDataError {
     WrongHeader(BlockHeaderDataFromHotStuffDataError),
     /// Wrong number of slice of bytes. It should contain equal number of transactions
     /// and receipts.
-    IncorrectNumberOfTxsAndReceipts,
+    IncorrectNumberOfTxnsAndReceipts,
     /// Fail to deserialize a transaction.
     Transaction,
     /// Signature of a transaction is invalid.
