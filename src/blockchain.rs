@@ -627,6 +627,8 @@ define_serde!(
 
 #[cfg(test)]
 mod test {
+    use std::convert::TryFrom;
+
     use rand::rngs::OsRng;
     use ed25519_dalek::Keypair;
 
@@ -816,6 +818,7 @@ mod test {
         verify_block(blockv2);
 
         // Block Conversion with verifying transaction signature.
+        assert!(BlockDataV2::try_from(&block.data).is_ok());
         let blockv2 = BlockV2::from_hotstuff_block(block.clone(), true).unwrap();
         verify_block(blockv2);
 
@@ -830,6 +833,7 @@ mod test {
             },
             None => panic!("cannot find the first transaction in block data!")
         }
+        assert!(matches!(BlockDataV2::try_from(&invalid_block.data),Err(BlockDataFromHotStuffDataError::InvalidTransactionSignature)));
         assert!(matches!(BlockV2::from_hotstuff_block(invalid_block, true),Err(BlockDataFromHotStuffDataError::InvalidTransactionSignature)));
 
         // Verify transaction integrity
@@ -851,6 +855,14 @@ mod test {
             None => panic!("cannot find the first receipt in block data!")
         }
         assert!(matches!(BlockV2::from_hotstuff_block(invalid_block, false),Err(BlockDataFromHotStuffDataError::Receipt)));
+
+        // Verify number of Transactions and Receipts
+        let mut invalid_block = block.clone();
+        invalid_block.data.remove(DatumIndexV2::receipts_start_index(1));
+        assert!(matches!(
+            BlockV2::from_hotstuff_block(invalid_block, false),
+            Err(BlockDataFromHotStuffDataError::IncorrectNumberOfTxnsAndReceipts)
+        ));
 
         // Verify block header integrity
         // - Number of Slots
@@ -1000,6 +1012,7 @@ mod test {
         verify_block(blockv1);
 
         // Block Conversion with verifying transaction signature.
+        assert!(BlockDataV1::try_from(&block.data).is_ok());
         let blockv1 = BlockV1::from_hotstuff_block(block.clone(), true).unwrap();
         verify_block(blockv1);
 
@@ -1014,6 +1027,7 @@ mod test {
             },
             None => panic!("cannot find the first transaction in block data!")
         }
+        assert!(matches!(BlockDataV1::try_from(&invalid_block.data),Err(BlockDataFromHotStuffDataError::InvalidTransactionSignature)));
         assert!(matches!(BlockV1::from_hotstuff_block(invalid_block, true),Err(BlockDataFromHotStuffDataError::InvalidTransactionSignature)));
 
         // Verify transaction integrity
@@ -1035,6 +1049,14 @@ mod test {
             None => panic!("cannot find the first receipt in block data!")
         }
         assert!(matches!(BlockV1::from_hotstuff_block(invalid_block, false),Err(BlockDataFromHotStuffDataError::Receipt)));
+
+        // Verify number of Transactions and Receipts
+        let mut invalid_block = block.clone();
+        invalid_block.data.remove(DatumIndexV1::receipts_start_index(1));
+        assert!(matches!(
+            BlockV1::from_hotstuff_block(invalid_block, false),
+            Err(BlockDataFromHotStuffDataError::IncorrectNumberOfTxnsAndReceipts)
+        ));
 
         // Verify block header integrity
         // - Number of Slots

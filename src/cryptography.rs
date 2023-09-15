@@ -163,7 +163,7 @@ pub type BloomFilter = [u8; 256];
 
 /// Compute logs bloom over receipts. It refers to the field `logs_bloom` in [crate::blockchain::BlockHeaderV1]
 /// in ParallelChain Protocol V0.4.
-pub fn logs_bloom_v1(receipts: impl AsRef<[ReceiptV1]>) -> ethbloom::Bloom {
+pub fn logs_bloom_v1<R: AsRef<[ReceiptV1]>>(receipts: R) -> ethbloom::Bloom {
     let mut bloom = ethbloom::Bloom::default();
     receipts.as_ref().iter().for_each(|recp| {
         recp.iter().for_each(|cr| {
@@ -178,11 +178,10 @@ pub fn logs_bloom_v1(receipts: impl AsRef<[ReceiptV1]>) -> ethbloom::Bloom {
 
 /// Compute logs bloom over receipts. It refers to the field `logs_bloom` in [crate::blockchain::BlockHeaderV2]
 /// in ParallelChain Protocol V0.5.
-pub fn logs_bloom_v2(receipts: impl AsRef<[ReceiptV2]>) -> ethbloom::Bloom {
+pub fn logs_bloom_v2<R: AsRef<[ReceiptV2]>>(receipts: R) -> ethbloom::Bloom {
     let mut bloom = ethbloom::Bloom::default();
     receipts.as_ref().iter().for_each(|recp| {
-        recp.command_receipts
-        .iter()
+        recp.command_receipts.iter()
         .filter_map(|cr|
             match cr {
                 CommandReceiptV2::Call(call_receipt) => Some(call_receipt.logs.clone()),
@@ -478,6 +477,32 @@ mod test {
                 })
             ]
         };
+        let recp_v2_d = ReceiptV2 {
+            gas_used: 100_000,
+            exit_code: ExitCodeV2::Ok,
+            command_receipts: vec![
+                CommandReceiptV2::Call(CallReceipt{
+                    gas_used: 0,
+                    exit_code: ExitCodeV2::Ok,
+                    logs: vec![
+                        Log {
+                            topic: [1u8; 40].to_vec(),
+                            value: [11u8; 200].to_vec()
+                        },
+                        Log {
+                            topic: [2u8; 40].to_vec(),
+                            value: [22u8; 200].to_vec()
+                        },
+                    ],
+                    return_value: Vec::new()
+                }),
+                CommandReceiptV2::Transfer(TransferReceipt{
+                    gas_used: 100_000,
+                    exit_code: ExitCodeV2::Error
+                })
+            ]
+        };
+
 
         // Verify logs_bloom_v1
         // - No Logs
@@ -494,6 +519,8 @@ mod test {
         assert_ne!(logs_bloom_v2(&[recp_v2_a.clone()]), logs_bloom_v2(&[recp_v2_b.clone()]));
         // - Difference in Logs
         assert_ne!(logs_bloom_v2(&[recp_v2_b.clone()]), logs_bloom_v2(&[recp_v2_c.clone()]));
+        // - Same Logs, different commands
+        assert_eq!(logs_bloom_v2(&[recp_v2_c.clone()]), logs_bloom_v2(&[recp_v2_d.clone()]));
 
         // Verify the difference of logs_bloom_v1 and logs_bloom_v2
         assert_eq!(logs_bloom_v1(&[]), logs_bloom_v2(&[]));
@@ -501,6 +528,7 @@ mod test {
         assert_eq!(logs_bloom_v1(&[recp_v1_a.clone()]), logs_bloom_v2(&[recp_v2_a.clone()]));
         assert_eq!(logs_bloom_v1(&[recp_v1_b.clone()]), logs_bloom_v2(&[recp_v2_b.clone()]));
         assert_eq!(logs_bloom_v1(&[recp_v1_c.clone()]), logs_bloom_v2(&[recp_v2_c.clone()]));
+
     }
 
     #[test]
