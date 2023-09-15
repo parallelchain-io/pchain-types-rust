@@ -97,22 +97,31 @@ pub fn sha256<T: AsRef<[u8]>>(data: T) -> Sha256Hash {
     ret.finalize().into()
 }
 
-/// Compute the Binary Merkle Tree root hash over a list of arbitrary data, e.g., [crate::blockchain::Transaction](transactions) or [crate::blockchain::Receipt](receipts).
+/// Compute the Binary Merkle Tree root hash over a list of arbitrary data.
+/// The arbitrary data is hashed by SHA256 and the hashes are used as leaves
+/// in the merkle tree.
 pub fn merkle_root<O: AsRef<[I]>, I: AsRef<[u8]>>(data: O) -> Sha256Hash {
-    // null hash really isn't all 0s. There is no hash value for a tree without root. But here 
-    // we use the 32-byte hash values to fill in the field definition inside data structures, for example, block header.
-    if data.as_ref().is_empty() {
-        return [0; 32]
-    }
-
     let prehashed_leaves: Vec<[u8; 32]> = data
         .as_ref()
         .iter()
         .map(sha256)
         .collect();
 
-    let merkle_tree = MerkleTree::<algorithms::Sha256>::from_leaves(&prehashed_leaves);
-    merkle_tree.root().unwrap()
+    merkle_root_from_prehashed_leaves(prehashed_leaves)    
+}
+
+/// Compute the Binary Merkle Tree root hash over a list of Hashes which are
+/// used as leaves in the merkle tree.
+pub fn merkle_root_from_prehashed_leaves<L: AsRef<[Sha256Hash]>>(prehashed_leaves: L) -> Sha256Hash {
+    // null hash really isn't all 0s. There is no hash value for a tree without root. But here 
+    // we use the 32-byte hash values to fill in the field definition inside data structures, for example, block header.
+    if prehashed_leaves.as_ref().is_empty() {
+        return [0; 32]
+    }
+
+    MerkleTree::<algorithms::Sha256>::from_leaves(prehashed_leaves.as_ref())
+        .root()
+        .unwrap()
 }
 
 /// Compute Transactions Hash which refers to the field `txns_hash` in [crate::blockchain::BlockHeaderV1]
@@ -137,7 +146,7 @@ pub fn txns_hash_v2(txns: impl AsRef<[TransactionV2]>) -> Sha256Hash {
         .iter()
         .map(|txn| txn.hash )
         .collect();
-    merkle_root(leaves)
+    merkle_root_from_prehashed_leaves(leaves)
 }
 
 /// Compute Receipts Hash which refers to the field `receipts_hash` in [crate::blockchain::BlockHeaderV1]
