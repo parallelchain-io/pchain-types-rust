@@ -187,9 +187,9 @@ pub struct BlockHeaderV2 {
 /// ## Creating a Transaction
 /// 
 /// There are two ways of creating an instance of transaction:
-/// 1. Using the [constructor function](Transaction::new): this takes in the user-provided fields of a transaction and
+/// 1. Using the constructor function, `TransactionV1::new(..)`: this takes in the user-provided fields of a transaction and
 ///    computes its signature and hash automatically.
-/// 2. Using a struct expression (i.e., `Transaction { signer: ..., }`): this does not check the signature and hash 
+/// 2. Using a struct expression (i.e., `TransactionV1 { signer: ..., }`): this does not check the signature and hash 
 ///    fields.
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct TransactionV1 {
@@ -283,9 +283,9 @@ impl TransactionV1 {
 /// ## Creating a Transaction
 /// 
 /// There are two ways of creating an instance of transaction:
-/// 1. Using the [constructor function](Transaction::new): this takes in the user-provided fields of a transaction and
+/// 1. Using the constructor function, `TransactionV2::new()`: this takes in the user-provided fields of a transaction and
 ///    computes its signature and hash automatically.
-/// 2. Using a struct expression (i.e., `Transaction { signer: ..., }`): this does not check the signature and hash 
+/// 2. Using a struct expression (i.e., `TransactionV2 { signer: ..., }`): this does not check the signature and hash 
 ///    fields.
 /// 
 /// [V1](TransactionV1) -> V2:
