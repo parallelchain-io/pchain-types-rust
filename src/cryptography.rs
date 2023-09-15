@@ -97,40 +97,27 @@ pub fn sha256<T: AsRef<[u8]>>(data: T) -> Sha256Hash {
     ret.finalize().into()
 }
 
-/// Compute the Binary Merkle Tree root hash over a list of arbitrary data.
-/// The arbitrary data is hashed by SHA256 and the hashes are used as leaves
-/// in the merkle tree.
-pub fn merkle_root<O: AsRef<[I]>, I: AsRef<[u8]>>(data: O) -> Sha256Hash {
-    let prehashed_leaves: Vec<[u8; 32]> = data
-        .as_ref()
-        .iter()
-        .map(sha256)
-        .collect();
-
-    merkle_root_from_prehashed_leaves(prehashed_leaves)    
-}
-
 /// Compute the Binary Merkle Tree root hash over a list of Hashes which are
 /// used as leaves in the merkle tree.
-pub fn merkle_root_from_prehashed_leaves<L: AsRef<[Sha256Hash]>>(prehashed_leaves: L) -> Sha256Hash {
+fn merkle_root<L: AsRef<[Sha256Hash]>>(leaves: L) -> Sha256Hash {
     // null hash really isn't all 0s. There is no hash value for a tree without root. But here 
     // we use the 32-byte hash values to fill in the field definition inside data structures, for example, block header.
-    if prehashed_leaves.as_ref().is_empty() {
+    if leaves.as_ref().is_empty() {
         return [0; 32]
     }
 
-    MerkleTree::<algorithms::Sha256>::from_leaves(prehashed_leaves.as_ref())
+    MerkleTree::<algorithms::Sha256>::from_leaves(leaves.as_ref())
         .root()
         .unwrap()
 }
 
 /// Compute Transactions Hash which refers to the field `txns_hash` in [crate::blockchain::BlockHeaderV1]
 /// in ParallelChain Protocol V0.4.
-pub fn txns_hash_v1(txns: impl AsRef<[TransactionV1]>) -> Sha256Hash {
-    let leaves: Vec<Vec<u8>> = txns
+pub fn txns_hash_v1<T: AsRef<[TransactionV1]>>(txns: T) -> Sha256Hash {
+    let leaves: Vec<Sha256Hash> = txns
         .as_ref()
         .iter()
-        .map(Serializable::serialize)
+        .map(|txn| sha256(Serializable::serialize(txn)))
         .collect();
     merkle_root(leaves)
 }
@@ -140,33 +127,33 @@ pub fn txns_hash_v1(txns: impl AsRef<[TransactionV1]>) -> Sha256Hash {
 /// 
 /// [V1](txns_hash_v1) -> V2:
 /// - Only the field `hash` in a Transaction is used for computing `txns_hash` in block header.
-pub fn txns_hash_v2(txns: impl AsRef<[TransactionV2]>) -> Sha256Hash {
+pub fn txns_hash_v2<T: AsRef<[TransactionV2]>>(txns: T) -> Sha256Hash {
     let leaves: Vec<Sha256Hash> = txns
         .as_ref()
         .iter()
         .map(|txn| txn.hash )
         .collect();
-    merkle_root_from_prehashed_leaves(leaves)
+    merkle_root(leaves)
 }
 
 /// Compute Receipts Hash which refers to the field `receipts_hash` in [crate::blockchain::BlockHeaderV1]
 /// in ParallelChain Protocol V0.4.
-pub fn receipts_hash_v1(receipts: impl AsRef<[ReceiptV1]>) -> Sha256Hash {
-    let leaves: Vec<Vec<u8>> = receipts
+pub fn receipts_hash_v1<R: AsRef<[ReceiptV1]>>(receipts: R) -> Sha256Hash {
+    let leaves: Vec<Sha256Hash> = receipts
         .as_ref()
         .iter()
-        .map(Serializable::serialize)
+        .map(|recp| sha256(Serializable::serialize(recp)))
         .collect();
     merkle_root(leaves)
 }
 
 /// Compute Receipts Hash which refers to the field `receipts_hash` in [crate::blockchain::BlockHeaderV2]
 /// in ParallelChain Protocol V0.5.
-pub fn receipts_hash_v2(receipts: impl AsRef<[ReceiptV2]>) -> Sha256Hash {
-    let leaves: Vec<Vec<u8>> = receipts
+pub fn receipts_hash_v2<R: AsRef<[ReceiptV2]>>(receipts: R) -> Sha256Hash {
+    let leaves: Vec<Sha256Hash> = receipts
         .as_ref()
         .iter()
-        .map(Serializable::serialize)
+        .map(|recp| sha256(Serializable::serialize(recp)))
         .collect();
     merkle_root(leaves)
 }
@@ -215,7 +202,7 @@ pub fn logs_bloom_v2(receipts: impl AsRef<[ReceiptV2]>) -> ethbloom::Bloom {
 #[cfg(test)]
 mod test {
     use sha2::{Sha256, Digest};
-    use crate::{cryptography::{contract_address_v1, contract_address_v2, txns_hash_v2, receipts_hash_v2, logs_bloom_v1, logs_bloom_v2}, blockchain::{TransactionV1, TransactionV2, CommandReceiptV1, ExitCodeV1, CommandReceiptV2, ReceiptV2, ExitCodeV2, NextEpochReceipt, TransferReceipt, Log, CallReceipt}};
+    use crate::{cryptography::{contract_address_v1, contract_address_v2, txns_hash_v2, receipts_hash_v2, logs_bloom_v1, logs_bloom_v2, Sha256Hash, sha256}, blockchain::{TransactionV1, TransactionV2, CommandReceiptV1, ExitCodeV1, CommandReceiptV2, ReceiptV2, ExitCodeV2, NextEpochReceipt, TransferReceipt, Log, CallReceipt}};
     use super::{PublicAddress, merkle_root, txns_hash_v1, receipts_hash_v1};
 
     #[test]
@@ -518,14 +505,17 @@ mod test {
 
     #[test]
     fn compute_empty_data_merkle_root() {
-        let elements: Vec<[u8;1]> = vec![];
+        let elements: Vec<Sha256Hash> = vec![];
         let root = merkle_root(elements);
         assert_eq!(root, [0;32]);
     }
 
     #[test]
     fn compute_non_empty_data_merkle_root() {
-        let elements = [b"a", b"b", b"c", b"d", b"e", b"f"];
+        let elements: Vec<Sha256Hash> = [b"a", b"b", b"c", b"d", b"e", b"f"]
+            .iter()
+            .map(sha256)
+            .collect();
         let root = merkle_root(&elements);
         assert_eq!(
             rs_merkle::utils::collections::to_hex_string(&root),
