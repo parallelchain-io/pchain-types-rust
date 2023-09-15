@@ -44,6 +44,10 @@ pub use ed25519_dalek::Signer;
 /// Implemented by [Keypair] and [PublicKey] to cryptographically [Verifier::verify] arbitrary bytesequences.
 pub use ed25519_dalek::Verifier;
 
+use crate::blockchain::TransactionV1;
+use crate::blockchain::TransactionV2;
+use crate::serialization::Serializable;
+
 /// Either:
 /// - an Ed25519 public key representing an external account, or
 /// - a contract address.
@@ -108,14 +112,36 @@ pub fn merkle_root<O: AsRef<[I]>, I: AsRef<[u8]>>(data: O) -> Sha256Hash {
     merkle_tree.root().unwrap()
 }
 
+/// Compute Transactions Hash which refers to the field `txns_hash` in [crate::blockchain::BlockHeaderV1]
+/// in ParallelChain Protocol V0.4.
+pub fn txns_hash_v1(txns: impl AsRef<[TransactionV1]>) -> Sha256Hash {
+    let leaves: Vec<Vec<u8>> = txns
+        .as_ref()
+        .iter()
+        .map(Serializable::serialize)
+        .collect();
+    merkle_root(leaves)
+}
+
+/// Compute Transactions Hash which refers to the field `txns_hash` in [crate::blockchain::BlockHeaderV2]
+/// in ParallelChain Protocol V0.5.
+pub fn txns_hash_v2(txns: impl AsRef<[TransactionV2]>) -> Sha256Hash {
+    let leaves: Vec<Sha256Hash> = txns
+        .as_ref()
+        .iter()
+        .map(|txn| txn.hash )
+        .collect();
+    merkle_root(leaves)
+}
+
 /// A 256-bit Bloom Filter.
 pub type BloomFilter = [u8; 256];
 
 #[cfg(test)]
 mod test {
     use sha2::{Sha256, Digest};
-    use crate::cryptography::{contract_address_v1, contract_address_v2};
-    use super::{PublicAddress, merkle_root};
+    use crate::{cryptography::{contract_address_v1, contract_address_v2, txns_hash_v2}, blockchain::{TransactionV1, TransactionV2}};
+    use super::{PublicAddress, merkle_root, txns_hash_v1};
 
     #[test]
     fn compute_contract_address() {
@@ -147,6 +173,88 @@ mod test {
         assert_ne!(contract_address_v2(&public_key, nonce, 1), contract_address_v2(&public_key, nonce + 1, 1));
         // check the result of same address with different index
         assert_ne!(contract_address_v2(&public_key, nonce, 1), contract_address_v2(&public_key, nonce, 2));
+    }
+
+    #[test]
+    fn compute_txns_hash() {
+        let txn_v1_a = TransactionV1 {
+            signer: [1u8; 32],
+            hash: [2u8; 32],
+            gas_limit: 100,
+            max_base_fee_per_gas: 200,
+            nonce: 300,
+            priority_fee_per_gas: 400,
+            commands: vec![],
+            signature: [3u8; 64]
+        };
+        let txn_v1_b = TransactionV1 {
+            hash: [21u8; 32],
+            nonce: 301,
+            ..txn_v1_a.clone()
+        };
+        let txn_v1_c = TransactionV1 {
+            hash: [22u8; 32],
+            gas_limit: 500,
+            ..txn_v1_a.clone()
+        };
+        // Same content as txn_v1
+        let txn_v2_a = TransactionV2 {
+            signer: [1u8; 32],
+            hash: [2u8; 32],
+            gas_limit: 100,
+            max_base_fee_per_gas: 200,
+            nonce: 300,
+            priority_fee_per_gas: 400,
+            commands: vec![],
+            signature: [3u8; 64]
+        };
+        let txn_v2_b = TransactionV2 {
+            hash: [21u8; 32],
+            nonce: 301,
+            ..txn_v2_a.clone()
+        };
+        let txn_v2_c = TransactionV2 {
+            hash: [22u8; 32],
+            gas_limit: 500,
+            ..txn_v2_a.clone()
+        };
+
+        // Verify txns_hash_v1
+        // - difference in number of txns
+        assert_ne!(txns_hash_v1(&[]), txns_hash_v1(&[txn_v1_a.clone()]));
+        // - difference in number of txns, share same subset of txns 
+        assert_ne!(txns_hash_v1(&[txn_v1_a.clone()]), txns_hash_v1(&[txn_v1_a.clone(), txn_v1_b.clone()]));
+        // - same number of txns, share same subset of txns, difference in some txns
+        assert_ne!(
+            txns_hash_v1(&[txn_v1_a.clone(), txn_v1_b.clone()]),
+            txns_hash_v1(&[txn_v1_a.clone(), txn_v1_c.clone()])
+        );
+
+        // Verify txns_hash_v2
+        // - difference in number of txns
+        assert_ne!(txns_hash_v2(&[]), txns_hash_v2(&[txn_v2_a.clone()]));
+        // - difference in number of txns, share same subset of txns 
+        assert_ne!(txns_hash_v2(&[txn_v2_a.clone()]), txns_hash_v2(&[txn_v2_a.clone(), txn_v2_b.clone()]));
+        // - same number of txns, share same subset of txns, difference in some txns
+        assert_ne!(
+            txns_hash_v2(&[txn_v2_a.clone(), txn_v2_b.clone()]),
+            txns_hash_v2(&[txn_v2_a.clone(), txn_v2_c.clone()])
+        );
+        // - difference in txn hash only
+        let txn_v2_a_diff_hash = TransactionV2 {
+            hash: [99u8; 32], // different hash
+            ..txn_v2_a.clone()
+        };
+        // - same txn hash, difference in other field
+        assert_ne!(txns_hash_v2(&[txn_v2_a_diff_hash]), txns_hash_v2(&[txn_v2_a.clone()]));
+        let txn_v2_a_same_hash = TransactionV2 {
+            nonce: 0,
+            ..txn_v2_a.clone() // same hash
+        };
+        assert_eq!(txns_hash_v2(&[txn_v2_a_same_hash]), txns_hash_v2(&[txn_v2_a.clone()]));
+
+        // Verify the difference of txns_hash_v1 and txns_hash_v2
+        assert_ne!(txns_hash_v1(&[txn_v1_a.clone()]), txns_hash_v2(&[txn_v2_a.clone()]));
     }
 
     #[test]
