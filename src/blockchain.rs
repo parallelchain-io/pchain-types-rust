@@ -6,6 +6,7 @@
 //! Types which appear in blocks like transactions and receipts, and also blocks themselves.
 
 use borsh::{BorshSerialize, BorshDeserialize};
+use crate::block_data::{BlockDataV1, BlockDataV2};
 use crate::serialization::{Serializable, Deserializable};
 use crate::cryptography::{Keypair, PublicKey, PublicAddress, SignatureBytes, Signer, Verifier, Sha256Hash, BloomFilter, sha256};
 use crate::{runtime::*, block_data};
@@ -44,35 +45,46 @@ pub struct BlockV2 {
     pub receipts : Vec<ReceiptV2>,
 }
 
-impl BlockV2 {
-    /// Conversion from [hotstuff_rs::types::Block], with an option to validate
-    /// signature of the transactions.
-    pub fn from_hotstuff_block(
-        block: hotstuff_rs::types::Block, verify_transaction_signatures: bool
-    ) -> Result<BlockV2, block_data::BlockDataFromHotStuffDataError> {
-        let blockdata = block_data::BlockDataV2::from_data(&block.data, verify_transaction_signatures)?;
-        Ok(BlockV2{
-            header: BlockHeaderV2 {
-                height: block.height,
-                hash: block.hash,
-                justify: block.justify,
-                data_hash: block.data_hash,
-                chain_id: blockdata.header.chain_id,
-                proposer: blockdata.header.proposer,
-                timestamp: blockdata.header.timestamp,
-                base_fee_per_gas: blockdata.header.base_fee_per_gas,
-                gas_used: blockdata.header.gas_used,
-                txns_hash: blockdata.header.transactions_hash,
-                receipts_hash: blockdata.header.receipts_hash,
-                state_hash: blockdata.header.state_hash,
-                logs_bloom: blockdata.header.logs_bloom
-            },
-            transactions: blockdata.transactions,
-            receipts: blockdata.receipts
-        })
-
-    }
+/// Create `Impl`s for Block exclusively from Version 1 to Version 2. The `impl`s define
+/// same set of functions across versions.
+/// 
+/// Arguments: (Block struct, Block Header struct, Block Data struct)
+macro_rules! block_impl_v1_to_v2 {
+    ($block:tt, $block_header:tt, $block_data:tt) => {
+        impl $block {
+            /// Conversion from [hotstuff_rs::types::Block], with an option to validate
+            /// signature of the transactions.
+            pub fn from_hotstuff_block(
+                block: hotstuff_rs::types::Block, verify_transaction_signatures: bool
+            ) -> Result<Self, block_data::BlockDataFromHotStuffDataError> {
+                let blockdata = $block_data::from_data(&block.data, verify_transaction_signatures)?;
+                Ok(Self{
+                    header: $block_header {
+                        height: block.height,
+                        hash: block.hash,
+                        justify: block.justify,
+                        data_hash: block.data_hash,
+                        chain_id: blockdata.header.chain_id,
+                        proposer: blockdata.header.proposer,
+                        timestamp: blockdata.header.timestamp,
+                        base_fee_per_gas: blockdata.header.base_fee_per_gas,
+                        gas_used: blockdata.header.gas_used,
+                        txns_hash: blockdata.header.transactions_hash,
+                        receipts_hash: blockdata.header.receipts_hash,
+                        state_hash: blockdata.header.state_hash,
+                        logs_bloom: blockdata.header.logs_bloom
+                    },
+                    transactions: blockdata.transactions,
+                    receipts: blockdata.receipts
+                })
+        
+            }
+        }        
+    };
 }
+
+block_impl_v1_to_v2!(BlockV1, BlockHeaderV1, BlockDataV1);
+block_impl_v1_to_v2!(BlockV2, BlockHeaderV2, BlockDataV2);
 
 /// Block header defines meta information of a block, including evidence for verifying validity of the block.
 #[derive(Clone, BorshSerialize, BorshDeserialize)]
@@ -618,7 +630,7 @@ mod test {
     use rand::rngs::OsRng;
     use ed25519_dalek::Keypair;
 
-    use crate::{runtime::TransferInput, blockchain::{CryptographicallyIncorrectTransactionError, TransactionV2}, block_data::{BlockDataV2, BlockHeaderDataV2, DatumIndexV2, BlockDataFromHotStuffDataError, BlockHeaderDataFromHotStuffDataError}, serialization::Serializable};
+    use crate::{runtime::TransferInput, blockchain::{CryptographicallyIncorrectTransactionError, TransactionV2, CommandReceiptV1, BlockV1}, block_data::{BlockDataV2, BlockHeaderDataV2, DatumIndexV2, BlockDataFromHotStuffDataError, BlockHeaderDataFromHotStuffDataError, BlockDataV1, BlockHeaderDataV1, DatumIndexV1}, serialization::Serializable};
     use super::{Command, TransactionV1, BlockV2, ReceiptV2, ExitCodeV2};
 
     #[test]
@@ -726,7 +738,7 @@ mod test {
     }
 
     #[test]
-    fn verify_block_data_conversion() {
+    fn verify_block_data_v2_conversion() {
         // Prepare test data: transaction receipt and a Hotsuff Block
         let transaction = {
             let mut csprng = OsRng{};
@@ -911,5 +923,219 @@ mod test {
             BlockV2::from_hotstuff_block(invalid_block, false),
             Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::LogsBloom))
         ));
+    }
+
+    #[test]
+    fn verify_block_data_v1_conversion() {
+        // Prepare test data: transaction receipt and a Hotsuff Block
+        let transaction = {
+            let mut csprng = OsRng{};
+            let signer: Keypair = Keypair::generate(&mut csprng);
+
+            let command = Command::Transfer( TransferInput{
+                recipient: [0;32],
+                amount: 1000,
+            });
+            TransactionV1::new(&signer, 0, vec![command], 500000, 8, 0)
+        };
+        let receipt = Vec::<CommandReceiptV1>::new();
+        let block = {
+            let block_data = BlockDataV1 {
+                header: BlockHeaderDataV1 {
+                    chain_id: 123,
+                    base_fee_per_gas: 8, 
+                    proposer: [3u8; 32],
+                    timestamp: 12345678,
+                    gas_used: 100,
+                    transactions_hash: [45u8; 32],
+                    receipts_hash: [56u8; 32],
+                    state_hash: [99u8; 32],
+                    logs_bloom: [11u8; 256]
+                },
+                transactions: vec![transaction.clone()],
+                receipts: vec![receipt.clone()]
+            };
+
+            let hotstuff_data = hotstuff_rs::types::Data::from(block_data);
+            hotstuff_rs::types::Block::new(
+                1234, 
+                hotstuff_rs::types::QuorumCertificate {
+                    chain_id: 123,
+                    view: 2,
+                    block: [32u8; 32],
+                    phase: hotstuff_rs::types::Phase::Generic,
+                    signatures: vec![]
+                }, 
+                [45u8; 32],
+                hotstuff_data
+            )
+        };
+        let block_hash_computed_from_hotstuff_rs = block.hash;
+
+        let verify_block = |blockv1: BlockV1| {
+            assert_eq!(blockv1.header.height, 1234);
+            assert_eq!(blockv1.header.chain_id, 123);
+            assert_eq!(blockv1.header.proposer, [3u8; 32]);
+            assert_eq!(blockv1.header.base_fee_per_gas, 8);
+            assert_eq!(blockv1.header.gas_used, 100);
+            assert_eq!(blockv1.header.justify.chain_id, 123);
+            assert_eq!(blockv1.header.justify.view, 2);
+            assert_eq!(blockv1.header.justify.block, [32u8; 32]);
+            assert_eq!(blockv1.header.justify.phase, hotstuff_rs::types::Phase::Generic);
+            assert_eq!(blockv1.header.justify.signatures, vec![]);
+            assert_eq!(blockv1.header.timestamp, 12345678);
+            assert_eq!(blockv1.header.txns_hash, [45u8; 32]);
+            assert_eq!(blockv1.header.receipts_hash, [56u8; 32]);
+            assert_eq!(blockv1.header.state_hash, [99u8; 32]);
+            assert_eq!(blockv1.header.data_hash, [45u8; 32]);
+            assert_eq!(blockv1.header.logs_bloom, [11u8; 256]);
+            assert_eq!(blockv1.header.hash, block_hash_computed_from_hotstuff_rs);
+    
+            assert_eq!(blockv1.transactions.first().unwrap(), &transaction);
+            assert_eq!(blockv1.receipts.first().unwrap(), &receipt);
+        };
+
+        // Without verifying transaction signature
+        let blockv1 = BlockV1::from_hotstuff_block(block.clone(), false).unwrap();
+        verify_block(blockv1);
+
+        // Block Conversion with verifying transaction signature.
+        let blockv1 = BlockV1::from_hotstuff_block(block.clone(), true).unwrap();
+        verify_block(blockv1);
+
+        // Verify transaction signature
+        let mut invalid_block = block.clone();
+        match invalid_block.data.get_mut(DatumIndexV1::transactions_start_index() as usize) {
+            Some(tx_ptr) => {
+                *tx_ptr = Serializable::serialize(&TransactionV1 {
+                    signature: [99u8; 64], // wrong signature
+                    ..transaction
+                });
+            },
+            None => panic!("cannot find the first transaction in block data!")
+        }
+        assert!(matches!(BlockV1::from_hotstuff_block(invalid_block, true),Err(BlockDataFromHotStuffDataError::InvalidTransactionSignature)));
+
+        // Verify transaction integrity
+        let mut invalid_block = block.clone();
+        match invalid_block.data.get_mut(DatumIndexV1::transactions_start_index() as usize) {
+            Some(tx_ptr) => {
+                *tx_ptr = vec![1u8];
+            },
+            None => panic!("cannot find the first transaction in block data!")
+        }
+        assert!(matches!(BlockV1::from_hotstuff_block(invalid_block, false),Err(BlockDataFromHotStuffDataError::Transaction)));
+
+        // Verify receipt integrity
+        let mut invalid_block = block.clone();
+        match invalid_block.data.get_mut(DatumIndexV1::receipts_start_index(1) as usize) {
+            Some(recp_ptr) => {
+                *recp_ptr = vec![1u8];
+            },
+            None => panic!("cannot find the first receipt in block data!")
+        }
+        assert!(matches!(BlockV1::from_hotstuff_block(invalid_block, false),Err(BlockDataFromHotStuffDataError::Receipt)));
+
+        // Verify block header integrity
+        // - Number of Slots
+        let mut invalid_block = block.clone();
+        invalid_block.data = Vec::new();
+        assert!(matches!(
+            BlockV1::from_hotstuff_block(invalid_block, false),
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::NumberOfSlots))
+        ));
+        // - chain id
+        let mut invalid_block = block.clone();
+        DatumIndexV1::set_chain_id(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV1::from_hotstuff_block(invalid_block, false),
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::ChainID))
+        ));
+        // - proposer
+        let mut invalid_block = block.clone();
+        DatumIndexV1::set_proposer(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV1::from_hotstuff_block(invalid_block, false),
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::Proposer))
+        ));
+        // - base_fee_per_gas
+        let mut invalid_block = block.clone();
+        DatumIndexV1::set_base_fee_per_gas(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV1::from_hotstuff_block(invalid_block, false),
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::BaseFeePerGas))
+        ));
+        // - gas_used
+        let mut invalid_block = block.clone();
+        DatumIndexV1::set_gas_used(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV1::from_hotstuff_block(invalid_block, false),
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::GasUsed))
+        ));
+        // - timestamp
+        let mut invalid_block = block.clone();
+        DatumIndexV1::set_timestamp(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV1::from_hotstuff_block(invalid_block, false),
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::Timestamp))
+        ));
+        // - transactions_hash
+        let mut invalid_block = block.clone();
+        DatumIndexV1::set_transactions_hash(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV1::from_hotstuff_block(invalid_block, false),
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::TxnsHash))
+        ));
+        // - receipts_hash
+        let mut invalid_block = block.clone();
+        DatumIndexV1::set_receipts_hash(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV1::from_hotstuff_block(invalid_block, false),
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::ReceiptsHash))
+        ));
+        // - state_hash
+        let mut invalid_block = block.clone();
+        DatumIndexV1::set_state_hash(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV1::from_hotstuff_block(invalid_block, false),
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::StateHash))
+        ));
+        // - logs_bloom
+        let mut invalid_block = block.clone();
+        DatumIndexV1::set_logs_bloom(&mut invalid_block.data, Vec::new());
+        assert!(matches!(
+            BlockV1::from_hotstuff_block(invalid_block, false),
+            Err(BlockDataFromHotStuffDataError::WrongHeader(BlockHeaderDataFromHotStuffDataError::LogsBloom))
+        ));
+    }
+
+    #[test]
+    fn verify_block_header_data_v1_and_v2() {
+        let block_header_data_v1 = BlockHeaderDataV1 {
+            chain_id: 123,
+            base_fee_per_gas: 8, 
+            proposer: [3u8; 32],
+            timestamp: 12345678,
+            gas_used: 100,
+            transactions_hash: [45u8; 32],
+            receipts_hash: [56u8; 32],
+            state_hash: [99u8; 32],
+            logs_bloom: [11u8; 256]
+        };
+
+        let block_header_data_v2 = BlockHeaderDataV2 {
+            chain_id: 123,
+            base_fee_per_gas: 8, 
+            proposer: [3u8; 32],
+            timestamp: 12345678,
+            gas_used: 100,
+            transactions_hash: [45u8; 32],
+            receipts_hash: [56u8; 32],
+            state_hash: [99u8; 32],
+            logs_bloom: [11u8; 256]
+        };
+
+        // Verify the difference in data hash computation on same block header context
+        assert_ne!(block_header_data_v1.data_hash(), block_header_data_v2.data_hash());
     }
 }
