@@ -7,10 +7,12 @@
 //! 
 //! ## Generating a Keypair 
 //! 
+//! ***This requires enabling the feature "rand_core".***
+//! 
 //! ```
 //! // OsRng and ChaCha are good defaults for pseudorandom number generation.
-//! use rand::rngs::OsRng;
-//! use rand_chacha::{ChaCha20Rng, rand_core::SeedableRng};
+//! use rand::{rngs::OsRng, SeedableRng};
+//! use rand_chacha::ChaCha20Rng;
 //! 
 //! let mut osrng = OsRng{};
 //! let mut chacha20_rng = ChaCha20Rng::from_rng(&mut osrng).unwrap();
@@ -22,21 +24,21 @@ use sha2::{Sha256, Digest};
 use rs_merkle::{MerkleTree, algorithms};
 
 /// An Ed25519 keypair.
-pub type Keypair = ed25519_dalek::Keypair;
+pub type Keypair = ed25519_dalek::SigningKey;
 
 /// An Ed25519 secret key.
 pub type SecretKey = ed25519_dalek::SecretKey;
 
 /// An Ed25519 public key.
-pub type PublicKey = ed25519_dalek::PublicKey;
+pub type PublicKey = ed25519_dalek::VerifyingKey;
 
 /// An Ed25519 signature.
 pub type Signature = ed25519_dalek::Signature;
 
 /// 64 bytes that *should be* an Ed25519 signature. 
 /// 
-/// Can be acquired from [Signature] using [Signature::to_bytes], and converted into it using `try_from`.
-pub type SignatureBytes = [u8; 64];
+/// Can be acquired from [Signature] using [Signature::to_bytes], and converted into it using `from_bytes`.
+pub type SignatureBytes = ed25519_dalek::ed25519::SignatureBytes;
 
 /// Implemented by [Keypair] and [SecretKey] to [Signer::sign] arbitrary bytesequences.
 pub use ed25519_dalek::Signer;

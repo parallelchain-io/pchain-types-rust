@@ -224,7 +224,7 @@ pub struct TransactionV1 {
 impl TransactionV1 {
     pub fn new(signer: &Keypair, nonce: u64, commands: Vec<Command>, gas_limit: u64, max_base_fee_per_gas: u64, priority_fee_per_gas: u64) -> TransactionV1 {
         let mut transaction = TransactionV1 {
-            signer: signer.public.to_bytes(),
+            signer: signer.verifying_key().to_bytes(),
             nonce,
             commands,
             gas_limit,
@@ -237,7 +237,7 @@ impl TransactionV1 {
         let signature = signer.sign(&Serializable::serialize(&transaction));
         transaction.signature = signature.into();
         
-        let hash = sha256(ed25519_dalek::ed25519::signature::Signature::as_bytes(&signature));
+        let hash = sha256(signature.to_bytes());
         transaction.hash = hash;
 
         transaction
@@ -254,8 +254,7 @@ impl TransactionV1 {
             .map_err(|_| CryptographicallyIncorrectTransactionError::InvalidSigner)?;
 
         // 2.
-        let signature = ed25519_dalek::Signature::from_bytes(&self.signature)
-            .map_err(|_| CryptographicallyIncorrectTransactionError::InvalidSignature)?;
+        let signature = ed25519_dalek::Signature::from_bytes(&self.signature);
 
         // 3.
         let signed_msg = {
@@ -270,7 +269,7 @@ impl TransactionV1 {
         public_key.verify(&signed_msg, &signature).map_err(|_| CryptographicallyIncorrectTransactionError::WrongSignature)?;
 
         // 4.
-        if self.hash != sha256(ed25519_dalek::ed25519::signature::Signature::as_bytes(&signature)) {
+        if self.hash != sha256(signature.to_bytes()) {
             return Err(CryptographicallyIncorrectTransactionError::WrongHash)
         }
         
@@ -333,7 +332,7 @@ impl TransactionV2 {
         max_base_fee_per_gas: u64,
         priority_fee_per_gas: u64
     ) -> Self {
-        let signer = keypair.public.to_bytes();
+        let signer = keypair.verifying_key().to_bytes();
 
         let msg_to_sign = [
             [Self::VERSION_BYTE].to_vec(),
@@ -348,7 +347,7 @@ impl TransactionV2 {
 
         let signature = keypair.sign(&msg_to_sign);
         
-        let hash = sha256(ed25519_dalek::ed25519::signature::Signature::as_bytes(&signature));
+        let hash = sha256(signature.to_bytes());
         
         TransactionV2 {
             signer,
@@ -373,8 +372,7 @@ impl TransactionV2 {
             .map_err(|_| CryptographicallyIncorrectTransactionError::InvalidSigner)?;
 
         // 2.
-        let signature = ed25519_dalek::Signature::from_bytes(&self.signature)
-            .map_err(|_| CryptographicallyIncorrectTransactionError::InvalidSignature)?;
+        let signature = ed25519_dalek::Signature::from_bytes(&self.signature);
 
         // 3.
         let signed_msg = [
@@ -391,7 +389,7 @@ impl TransactionV2 {
         public_key.verify(&signed_msg, &signature).map_err(|_| CryptographicallyIncorrectTransactionError::WrongSignature)?;
 
         // 4.
-        if self.hash != sha256(ed25519_dalek::ed25519::signature::Signature::as_bytes(&signature)) {
+        if self.hash != sha256(signature.to_bytes()) {
             return Err(CryptographicallyIncorrectTransactionError::WrongHash)
         }
         
@@ -402,7 +400,6 @@ impl TransactionV2 {
 #[derive(Debug)]
 pub enum CryptographicallyIncorrectTransactionError {
     InvalidSigner,
-    InvalidSignature,
     WrongSignature,
     WrongHash,
 }
@@ -630,9 +627,8 @@ mod test {
     use std::convert::TryFrom;
 
     use rand::rngs::OsRng;
-    use ed25519_dalek::Keypair;
 
-    use crate::{runtime::TransferInput, blockchain::{CryptographicallyIncorrectTransactionError, TransactionV2, CommandReceiptV1, BlockV1}, block_data::{BlockDataV2, BlockHeaderDataV2, DatumIndexV2, BlockDataFromHotStuffDataError, BlockHeaderDataFromHotStuffDataError, BlockDataV1, BlockHeaderDataV1, DatumIndexV1}, serialization::Serializable};
+    use crate::{runtime::TransferInput, blockchain::{CryptographicallyIncorrectTransactionError, TransactionV2, CommandReceiptV1, BlockV1}, block_data::{BlockDataV2, BlockHeaderDataV2, DatumIndexV2, BlockDataFromHotStuffDataError, BlockHeaderDataFromHotStuffDataError, BlockDataV1, BlockHeaderDataV1, DatumIndexV1}, serialization::Serializable, cryptography::Keypair};
     use super::{Command, TransactionV1, BlockV2, ReceiptV2, ExitCodeV2};
 
     #[test]
@@ -666,7 +662,7 @@ mod test {
             ..txn.clone()
         };
         let result = invalid_txn.is_cryptographically_correct();
-        assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::InvalidSignature)));
+        assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::WrongSignature)));
 
         // Intensionally set invalid hash
         let invalid_txn = TransactionV1 {
@@ -680,7 +676,7 @@ mod test {
         let mut csprng = OsRng{};
         let wrong_signer: Keypair = Keypair::generate(&mut csprng);
         let invalid_txn = TransactionV1 {
-            signer: wrong_signer.public.to_bytes(),
+            signer: wrong_signer.verifying_key().to_bytes(),
             ..txn.clone()
         };
         let result = invalid_txn.is_cryptographically_correct();
@@ -718,7 +714,7 @@ mod test {
             ..txn.clone()
         };
         let result = invalid_txn.is_cryptographically_correct();
-        assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::InvalidSignature)));
+        assert!(matches!(result,Err(CryptographicallyIncorrectTransactionError::WrongSignature)));
 
         // Intensionally set invalid hash
         let invalid_txn = TransactionV2 {
@@ -732,7 +728,7 @@ mod test {
         let mut csprng = OsRng{};
         let wrong_signer: Keypair = Keypair::generate(&mut csprng);
         let invalid_txn = TransactionV2 {
-            signer: wrong_signer.public.to_bytes(),
+            signer: wrong_signer.verifying_key().to_bytes(),
             ..txn.clone()
         };
         let result = invalid_txn.is_cryptographically_correct();
