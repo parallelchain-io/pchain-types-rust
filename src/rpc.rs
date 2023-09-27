@@ -10,7 +10,7 @@ use borsh::{BorshSerialize, BorshDeserialize};
 use hotstuff_rs::types::{CryptoHash, BlockHeight};
 use crate::serialization::{Serializable, Deserializable};
 use crate::cryptography::PublicAddress;
-use crate::blockchain::{BlockV1, BlockHeaderV1, CommandReceiptV1, TransactionV2, CommandReceiptV2, BlockV2, ReceiptV2, TransactionV1, ReceiptV1};
+use crate::blockchain::{BlockV1, BlockHeaderV1, CommandReceiptV1, TransactionV2, CommandReceiptV2, BlockV2, ReceiptV2, TransactionV1, ReceiptV1, BlockHeaderV2};
 
 /* Transaction RPCs */
 
@@ -261,8 +261,8 @@ pub enum BlockV1ToV2 {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
 pub enum BlockHeaderV1ToV2 {
-    V1(BlockV1),
-    V2(BlockV2)
+    V1(BlockHeaderV1),
+    V2(BlockHeaderV2)
 }
 
 /* State RPCs */
