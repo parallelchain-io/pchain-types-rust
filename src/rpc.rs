@@ -214,8 +214,13 @@ pub struct BlockHeaderRequest {
 }
 
 #[derive(Clone, BorshSerialize, BorshDeserialize)]
-pub struct BlockHeaderResponse {
+pub struct BlockHeaderResponseV1 {
     pub block_header: Option<BlockHeaderV1>,
+}
+
+#[derive(Clone, BorshSerialize, BorshDeserialize)]
+pub struct BlockHeaderResponseV2 {
+    pub block_header: Option<BlockHeaderV1ToV2>,
 }
 
 /// Get the height of the block with a given block hash.
@@ -250,8 +255,14 @@ pub struct HighestCommittedBlockResponse {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone)]
 pub enum BlockV1ToV2 {
-    BlockV1(BlockV1),
-    BlockV2(BlockV2)
+    V1(BlockV1),
+    V2(BlockV2)
+}
+
+#[derive(BorshSerialize, BorshDeserialize, Clone)]
+pub enum BlockHeaderV1ToV2 {
+    V1(BlockV1),
+    V2(BlockV2)
 }
 
 /* State RPCs */
@@ -440,7 +451,7 @@ define_serde!(
     TransactionPositionRequest, TransactionPositionResponse, 
     ReceiptRequest, ReceiptResponseV1, ReceiptResponseV2,
     BlockRequest, BlockResponseV1, BlockResponseV2,
-    BlockHeaderRequest, BlockHeaderResponse,
+    BlockHeaderRequest, BlockHeaderResponseV1, BlockHeaderResponseV2,
     BlockHeightByHashRequest, BlockHeightByHashResponse,
     BlockHashByHeightRequest, BlockHashByHeightResponse,
     HighestCommittedBlockResponse,
