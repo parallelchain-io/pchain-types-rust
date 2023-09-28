@@ -149,7 +149,7 @@ pub enum TransactionEventsFilter {
 /// It is part of a RPC response from a Notification WebSocket.
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub enum TransactionEvent {
-    Received,
+    Received(TransactionV1OrV2),
     InsertedToMempool,
     RejectedFromMempool(RejectedFromMempoolReason),
     RemovedFromMempool(RemovedFromMempoolReason),
@@ -165,7 +165,6 @@ pub enum RejectedFromMempoolReason {
     NonceLTCommitted,
     BaseFeePerGasTooLow,
     MempoolIsFull,
-    DuplicateSignerAndNonce,
     Other,
 }
 
@@ -174,7 +173,7 @@ pub enum RemovedFromMempoolReason {
     NonceLTCommitted,
     BaseFeePerGasTooLow,
     MempoolIsFull,
-    ReplacedByDuplicateSignerAndNonce,
+    DuplicateNonce,
     Other,
 }
 
