@@ -138,6 +138,12 @@ pub enum ReceiptV1ToV2 {
     V2(ReceiptV2)
 }
 
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub enum CommandReceiptV1ToV2 {
+    V1(CommandReceiptV1),
+    V2(CommandReceiptV2)
+}
+
 /// A Filter used in the RPC Request [SubscribeToTransactionEventsRequest].
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub enum TransactionEventsFilter {
@@ -354,7 +360,7 @@ pub struct ViewResponseV1 {
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct ViewResponseV2 {
-    pub receipt: CommandReceiptV2
+    pub receipt: CommandReceiptV1ToV2
 }
 
 /* Account-related types */
