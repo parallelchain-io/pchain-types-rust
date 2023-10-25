@@ -179,7 +179,7 @@ pub enum RemovedFromMempoolReason {
     NonceLTCommitted,
     BaseFeePerGasTooLow,
     MempoolIsFull,
-    DuplicateNonce,
+    DuplicateTransaction,
     Other,
 }
 
