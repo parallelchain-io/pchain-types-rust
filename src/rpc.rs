@@ -448,7 +448,7 @@ define_serde!(
     SubmitTransactionRequestV1, SubmitTransactionResponseV1,
     SubmitTransactionRequestV2, SubmitTransactionResponseV2,
     SubmitTransactionErrorV1, SubmitTransactionErrorV2,
-    TransactionV1OrV2,
+    TransactionV1ToV2, ReceiptV1ToV2,
 
     SubscribeToTransactionEventsRequest,
     TransactionEvent,
