@@ -170,8 +170,8 @@ pub enum TransactionEvent {
 pub enum RejectedFromMempoolReason {
     NonceLTCommitted,
     BaseFeePerGasTooLow,
-    DuplicateTransaction,
     MempoolIsFull,
+    DuplicateTransaction,
     Other,
 }
 
@@ -436,16 +436,7 @@ pub enum Pool {
     WithoutStakes(PoolWithoutDelegators),
 }
 
-macro_rules! define_serde {
-    ($($t:ty),*) => {
-        $(
-            impl Serializable for $t {}
-            impl Deserializable for $t {}
-        )*
-    }
-}
-
-define_serde!(
+crate::serialization::define_serde!(
     SubmitTransactionRequestV1, SubmitTransactionResponseV1,
     SubmitTransactionRequestV2, SubmitTransactionResponseV2,
     SubmitTransactionErrorV1, SubmitTransactionErrorV2,

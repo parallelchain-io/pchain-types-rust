@@ -121,16 +121,7 @@ pub struct UnstakeDepositInput {
     pub max_amount: u64,
 }
 
-macro_rules! define_serde {
-    ($($t:ty),*) => {
-        $(
-            impl Serializable for $t {}
-            impl Deserializable for $t {}
-        )*
-    }
-}
-
-define_serde!(
+crate::serialization::define_serde!(
     TransferInput, DeployInput, CallInput,
     CreatePoolInput, SetPoolSettingsInput, 
     CreateDepositInput, SetDepositSettingsInput,

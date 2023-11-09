@@ -602,16 +602,7 @@ pub enum ExitCodeV1 {
     GasExhausted,
 }
 
-macro_rules! define_serde {
-    ($($t:ty),*) => {
-        $(
-            impl Serializable for $t {}
-            impl Deserializable for $t {}
-        )*
-    }
-}
-
-define_serde!(
+crate::serialization::define_serde!(
     BlockV1, BlockV2, BlockHeaderV1, BlockHeaderV2,
     TransactionV1, TransactionV2, Command, Log, 
     ReceiptV2, CommandReceiptV1, CommandReceiptV2, ExitCodeV1, ExitCodeV2,

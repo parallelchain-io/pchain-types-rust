@@ -19,20 +19,20 @@ pub trait Deserializable: borsh::BorshDeserialize {
     }
 }
 
-impl Serializable for u32 {}
-impl Deserializable for u32 {}
+macro_rules! define_serde {
+    ($($t:ty),*) => {
+        $(
+            impl Serializable for $t {}
+            impl Deserializable for $t {}
+        )*
+    }
+}
+pub(crate) use define_serde;
 
-impl Serializable for u64 {}
-impl Deserializable for u64 {}
 
-impl Serializable for Vec<u8> {}
-impl Deserializable for Vec<u8> {}
-
-impl Serializable for bool {}
-impl Deserializable for bool {}
-
-impl Serializable for String {}
-impl Deserializable for String {}
+define_serde!(
+    u8, u16, u32, u64, bool, String
+);
 
 impl<T: Serializable> Serializable for Option<T>{}
 impl<T: Deserializable> Deserializable for Option<T>{}
@@ -43,60 +43,34 @@ impl<T: Deserializable> Deserializable for Vec<T> {}
 impl<T1: Serializable> Serializable for (T1,) {}
 impl<T1: Deserializable> Deserializable for (T1,) {}
 
-impl<const N: usize> Serializable for [u8; N] {}
-impl<const N: usize> Deserializable for [u8; N] {}
+impl<T: Serializable, const N: usize> Serializable for [T; N] {}
+impl<T: Deserializable, const N: usize> Deserializable for [T; N] {}
 
-macro_rules! impl_tuple_serializable {
+macro_rules! impl_tuple_serde {
     ($($idx:tt $name:ident)+) => {
       impl<$($name: Serializable),+> Serializable for ($($name),+) {}
+      impl<$($name: Deserializable),+> Deserializable for ($($name),+) {}
     };
 }
-
-macro_rules! impl_tuple_deserializable {
-    ($($idx:tt $name:ident)+) => {
-        impl<$($name: Deserializable),+> Deserializable for ($($name),+) {}
-    };
-}
-
-impl_tuple_serializable!(0 T0 1 T1);
-impl_tuple_serializable!(0 T0 1 T1 2 T2);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15 16 T16);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15 16 T16 17 T17);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15 16 T16 17 T17 18 T18);
-impl_tuple_serializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15 16 T16 17 T17 18 T18 19 T19);
-
-impl_tuple_deserializable!(0 T0 1 T1);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15 16 T16);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15 16 T16 17 T17);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15 16 T16 17 T17 18 T18);
-impl_tuple_deserializable!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15 16 T16 17 T17 18 T18 19 T19);
+impl_tuple_serde!(0 T0 1 T1);
+impl_tuple_serde!(0 T0 1 T1 2 T2);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15 16 T16);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15 16 T16 17 T17);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15 16 T16 17 T17 18 T18);
+impl_tuple_serde!(0 T0 1 T1 2 T2 3 T3 4 T4 5 T5 6 T6 7 T7 8 T8 9 T9 10 T10 11 T11 12 T12 13 T13 14 T14 15 T15 16 T16 17 T17 18 T18 19 T19);
 
 #[cfg(test)]
 mod test {
@@ -121,9 +95,11 @@ mod test {
         };
     }
 
-    test_primitive!( test_u32, 100_u32, u32);
-    test_primitive!( test_u64, 100_u64, u64);
-    test_primitive!( test_vec_u8, vec![100_u8; 1000], Vec<u8>);
+    test_primitive!( test_u8, 101_u8, u8);
+    test_primitive!( test_u16, 102_u16, u16);
+    test_primitive!( test_u32, 103_u32, u32);
+    test_primitive!( test_u64, 104_u64, u64);
+    test_primitive!( test_vec_u8, vec![105_u8; 1000], Vec<u8>);
     test_primitive!( test_bool, true, bool);
     test_primitive!( test_string, "test_string".to_string(), String);
 
@@ -139,6 +115,18 @@ mod test {
         check!(Some(vec![vec![100_u8; 10], vec![200_u8; 10]]), Option<Vec<Vec<u8>>>);
         check!(Some((255_u32,)), Option<(u32,)>);
         check!(Some([255_u8; 10]), Option<[u8; 10]>);
+    }
+
+    #[test]
+    fn test_slice() {
+        check!([1u8], [u8; 1]);
+        check!([1u16, 2], [u16; 2]);
+        check!([1u32, 2, 3], [u32; 3]);
+        check!([1u64, 2, 3, 4], [u64; 4]);
+        check!([true, false], [bool; 2]);
+        check!(["true".to_string(), "false".to_string(), "".to_string()], [String; 3]);
+        check!([Some("true".to_string()), None, Some("".to_string())], [Option<String>; 3]);
+        check!([(1u8, 2u64), (3u8, 4u64)], [(u8, u64); 2]);
     }
 
     #[test]
