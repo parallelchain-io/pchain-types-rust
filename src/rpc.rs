@@ -170,6 +170,7 @@ pub enum TransactionEvent {
 pub enum RejectedFromMempoolReason {
     NonceLTCommitted,
     BaseFeePerGasTooLow,
+    DuplicateTransaction,
     MempoolIsFull,
     Other,
 }
