@@ -24,7 +24,9 @@ ed25519-dalek = "2.0"
 ethbloom = "0.13"
 hotstuff_rs = { git = "https://github.com/parallelchain-io/hotstuff_rs", branch = "0.3" }
 rs_merkle = "1.1"
+serde = { version = "1.0.192", optional = true }
 sha2 = "0.10"
 
 [features]
 rand_core = ["ed25519-dalek/rand_core"]
+serde = ["serde/serde_derive" ]

@@ -405,6 +405,7 @@ pub enum CryptographicallyIncorrectTransactionError {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Command {
     Transfer(TransferInput),
     Deploy(DeployInput),
@@ -425,6 +426,7 @@ pub enum Command {
 /// in a cryptographically-provable way. Log produced by transactions that call smart contracts
 /// are stored in the `logs` field of a Block in the order in which they are emitted.
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Log { 
     /// Key of this event. It is created from contract execution.
     pub topic: Vec<u8>,
@@ -441,6 +443,7 @@ pub type ReceiptV1 = Vec<CommandReceiptV1>;
 /// - Add Gas Used
 /// - Add Exit Code
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ReceiptV2 {
     /// The transaction’s inclusion cost + the sum of the "Gas Used"s of each of the command’s Command Receipts.
     pub gas_used: u64, 
@@ -454,6 +457,7 @@ pub struct ReceiptV2 {
 
 /// A CommandReceipt summarizes the result of execution of a [Command].
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CommandReceiptV1 {
     /// Exit code tells whether the corresponding command in the sequence
     /// succeeded in doing its operation, and, if it failed, whether the 
@@ -475,6 +479,7 @@ pub struct CommandReceiptV1 {
 /// - All variants have common fields: Exit Code and Gas Used. Some varients have additional
 /// fields.
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum CommandReceiptV2 {
     Transfer(TransferReceipt),
     Call(CallReceipt),
@@ -496,6 +501,7 @@ macro_rules! command_receipt_common_fields {
     ($($t:tt),*) => {
         $(
             #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+            #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
             pub struct $t {
                 /// Exit code tells whether the corresponding command in the sequence
                 /// succeeded in doing its operation, and, if it failed, whether the 
@@ -518,6 +524,7 @@ command_receipt_common_fields!(
 
 
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CallReceipt {
     /// Exit code tells whether the corresponding command in the sequence
     /// succeeded in doing its operation, and, if it failed, whether the 
@@ -534,6 +541,7 @@ pub struct CallReceipt {
 
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WithdrawDepositReceipt {
     /// Exit code tells whether the corresponding command in the sequence
     /// succeeded in doing its operation, and, if it failed, whether the 
@@ -548,6 +556,7 @@ pub struct WithdrawDepositReceipt {
 
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct StakeDepositReceipt {
     /// Exit code tells whether the corresponding command in the sequence
     /// succeeded in doing its operation, and, if it failed, whether the 
@@ -561,6 +570,7 @@ pub struct StakeDepositReceipt {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UnstakeDepositReceipt {
     /// Exit code tells whether the corresponding command in the sequence
     /// succeeded in doing its operation, and, if it failed, whether the 
@@ -578,6 +588,7 @@ pub struct UnstakeDepositReceipt {
 /// [V1](ExitCodeV1) -> V2:
 /// - Add "Not Executed" variant
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ExitCodeV2 {
     /// The Transaction successfully accomplished everything that it could have been expected to do.
     Ok,
@@ -591,6 +602,7 @@ pub enum ExitCodeV2 {
 
 /// Defines the success and error types of receipt.
 #[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum ExitCodeV1 {
     /// The Transaction successfully accomplished everything that it could have been expected to do.
     Success,
