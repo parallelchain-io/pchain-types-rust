@@ -356,12 +356,12 @@ pub struct ViewRequest {
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct ViewResponseV1 {
-    pub receipt: CommandReceiptV1
+    pub command_receipt: CommandReceiptV1
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub struct ViewResponseV2 {
-    pub receipt: CommandReceiptV1ToV2
+    pub command_receipt: CommandReceiptV1ToV2
 }
 
 /* Account-related types */
