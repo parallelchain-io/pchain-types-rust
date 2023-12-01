@@ -9,6 +9,7 @@ use crate::serialization::{Serializable, Deserializable};
 use crate::cryptography::PublicAddress;
 
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TransferInput {
     /// Recipient of the transfer
     pub recipient: PublicAddress,
@@ -17,10 +18,8 @@ pub struct TransferInput {
     pub amount: u64
 }
 
-impl Serializable for TransferInput {}
-impl Deserializable for TransferInput {}
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DeployInput {
     /// Smart contract in format of WASM bytecode
     pub contract: Vec<u8>,
@@ -29,10 +28,8 @@ pub struct DeployInput {
     pub cbi_version: u32
 }
 
-impl Serializable for DeployInput {}
-impl Deserializable for DeployInput {}
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CallInput {
     /// The address of the target contract
     pub target: PublicAddress,
@@ -48,30 +45,24 @@ pub struct CallInput {
     pub amount: Option<u64>
 }
 
-impl Serializable for CallInput {}
-impl Deserializable for CallInput {}
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreatePoolInput {
     /// Commission rate (in unit of percentage) is the portion that 
     /// the owners of its delegated stakes should pay from the reward in an epoch transaction.
     pub commission_rate: u8
 }
 
-impl Serializable for CreatePoolInput {}
-impl Deserializable for CreatePoolInput {}
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SetPoolSettingsInput {
     /// Commission rate (in unit of percentage) is the portion that 
     /// the owners of its delegated stakes should pay from the reward in an epoch transaction.
     pub commission_rate: u8,
 }
 
-impl Serializable for SetPoolSettingsInput {}
-impl Deserializable for SetPoolSettingsInput {}
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreateDepositInput {
     /// The address of operator of the target pool
     pub operator: PublicAddress,
@@ -84,10 +75,8 @@ pub struct CreateDepositInput {
     pub auto_stake_rewards: bool,
 }
 
-impl Serializable for CreateDepositInput {}
-impl Deserializable for CreateDepositInput {} 
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SetDepositSettingsInput {
     /// The address of operator of the target pool
     pub operator: PublicAddress,
@@ -97,10 +86,8 @@ pub struct SetDepositSettingsInput {
     pub auto_stake_rewards: bool,
 }
 
-impl Serializable for SetDepositSettingsInput {}
-impl Deserializable for SetDepositSettingsInput {}
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TopUpDepositInput {
     /// The address of operator of the target pool
     pub operator: PublicAddress,
@@ -109,10 +96,8 @@ pub struct TopUpDepositInput {
     pub amount: u64,
 }
 
-impl Serializable for TopUpDepositInput {}
-impl Deserializable for TopUpDepositInput {}
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WithdrawDepositInput {
     /// The address of operator of the target pool
     pub operator: PublicAddress,
@@ -123,10 +108,8 @@ pub struct WithdrawDepositInput {
     pub max_amount: u64,
 }
 
-impl Serializable for WithdrawDepositInput {}
-impl Deserializable for WithdrawDepositInput {}
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct StakeDepositInput {
     /// The address of operator of the target pool
     pub operator: PublicAddress,
@@ -137,10 +120,8 @@ pub struct StakeDepositInput {
     pub max_amount: u64,
 }
 
-impl Serializable for StakeDepositInput {}
-impl Deserializable for StakeDepositInput {}
-
 #[derive(Debug, Clone, PartialEq, Eq, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UnstakeDepositInput {
     /// The address of operator of the target pool
     pub operator: PublicAddress,
@@ -151,5 +132,10 @@ pub struct UnstakeDepositInput {
     pub max_amount: u64,
 }
 
-impl Serializable for UnstakeDepositInput {}
-impl Deserializable for UnstakeDepositInput {}
+crate::serialization::define_serde!(
+    TransferInput, DeployInput, CallInput,
+    CreatePoolInput, SetPoolSettingsInput, 
+    CreateDepositInput, SetDepositSettingsInput,
+    TopUpDepositInput, WithdrawDepositInput,
+    StakeDepositInput, UnstakeDepositInput
+);
