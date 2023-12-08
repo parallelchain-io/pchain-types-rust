@@ -48,6 +48,7 @@ pub enum SubmitTransactionErrorV2 {
     NonceLTCommitted,
     BaseFeePerGasTooLow,
     MempoolIsFull,
+    TransactionVersionTooOld,
     Other,
 }
 
