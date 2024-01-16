@@ -283,10 +283,27 @@ pub struct StateRequest {
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-pub struct StateResponse {
+pub struct StateResponseV1 {
     pub accounts: HashMap<PublicAddress, Account>,
     pub storage_tuples: HashMap<PublicAddress, HashMap<Vec<u8>, Vec<u8>>>,
     pub block_hash: CryptoHash,
+}
+
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub enum StateResponseV2 {
+    Ok {
+        accounts: HashMap<PublicAddress, Account>,
+        storage_tuples: HashMap<PublicAddress, HashMap<Vec<u8>, Vec<u8>>>,
+        block_hash: CryptoHash,
+    },
+    Error {
+        error: StateError,   
+    },
+}
+
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
+pub enum StateError {
+    KeyTooLong,
 }
 
 /// Get the previous, current, and next validator sets, optionally including the stakes delegated to them.
@@ -456,7 +473,7 @@ crate::serialization::define_serde!(
     BlockHashByHeightRequest, BlockHashByHeightResponse,
     HighestCommittedBlockResponse,
 
-    StateRequest, StateResponse,
+    StateRequest, StateResponseV1, StateResponseV2,
     ValidatorSetsRequest, ValidatorSetsResponse,
     PoolsRequest, PoolsResponse,
     StakesRequest, StakesResponse,
