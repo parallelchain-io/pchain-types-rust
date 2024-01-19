@@ -297,14 +297,12 @@ pub enum StateResponseV2 {
         block_hash: CryptoHash,
     },
     Error {
-        error: StateError,   
+        error: RequestedStorageKeyIsTooLongError,   
     },
 }
 
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
-pub enum StateError {
-    KeyTooLong,
-}
+pub struct RequestedStorageKeyIsTooLongError;
 
 /// Get the previous, current, and next validator sets, optionally including the stakes delegated to them.
 #[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
