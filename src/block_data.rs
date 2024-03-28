@@ -3,19 +3,36 @@
     Licensed under the Apache License, Version 2.0: http://www.apache.org/licenses/LICENSE-2.0
 */
 
-//! Defines the data utilization of [hotstuff_rs::types::Data] (i.e. HotstuffData, a vector of vector of bytes) to serve the application. 
-//! The module also provides a struct called BlockData as a data abstraction of [hotstuff_rs::types::Block].data.
+//! Defines the mapping between fields of [ParallelChain Blocks](crate::blockchain) and indices in [HotStuff-rs Block Data](hotstuff_rs::types::Data).
 //! 
-//! HotstuffData is a vector of vector of bytes. Each slot contains data in bytes (`Vec<u8>`). Block data is allocated into slots as below:
+//! ## HotStuff-rs Block Data
 //! 
-//! \[ BlockHeader Field 1, BlockHeader Field 2, ... , BlockHeader Field N, Tx 1, Tx 2, ... , Tx M, Receipt 1, Receipt 2, ... , Receipt M \]
+//! ParallelChain Fullnodes use HotStuff-rs for state machine replication. Therefore, HotStuff-rs defines the fundamental "Block" data type (henceforth
+//! referred to as ["HotStuff-rs Blocks"](hotstuff_rs::types::Block)) used in the ParallelChain Protocol. 
 //! 
-//! where N is the number of fields in BlockHeader, M is the number of transactions (as well as receipts).
+//! However, since HotStuff-rs is an implementation of a **general-purpose** state machine replication algorithm, its Block type is minimal by design
+//! (currently containing only 5 fields) and crucially, agnostic about the semantics and concepts of the application blockchain (the application blockchain
+//! here being ParallelChain). 
+//! 
+//! Reflecting this agnostic-ness, the HotStuff-rs Block type does not encode even seemingly "basic" entities like Transactions or State Hash at a type
+//! level. Instead, to produce HotStuff-rs Blocks, application blockchains are supposed to serialize these entities into vectors of bytes 
+//! (["Datums"](hotstuff_rs::types::Datum)) and insert these into particular indices or "slots" of the [Data field](hotstuff_rs::types::Block::data).
+//! 
+//! What each "slot" in a particular HotStuff-rs Block means is determined by the application blockchain. For example, a particular application blockchain
+//! may place the "State Hash" at slot 5, while another application blockchain may place it at slot 6. The ParallelChain Protocol defines a particular
+//! mapping between ParallelChain-level entities and HotStuff-rs Block Data slots, which is specified [here](https://github.com/parallelchain-io/parallelchain-protocol/blob/master/Blockchain.md#equivalence-between-hotstuff-rs-blocks-and-protocol-blocks)
+//! for `BlockV1` (specification for `BlockV2` is upcoming). This module implements this mapping.
+//! 
+//! ## HotStuff-rs Block vs ParallelChain Blocks
+//! 
+//! The [blockchain](crate::blockchain) module of this library defines a set of "Block" types (e.g., [BlockV1](crate::blockchain::BlockV1) and 
+//! [BlockV2](crate::blockchain::BlockV2)) that are distinct but related to HotStuff-rs Blocks. (Henceforth in this section referred to as "ParallelChain
+//! Blocks").
+//! 
+//! TODO: talk about how the definitions in this module help to convert between HotStuff-rs Blocks and ParallelChain Blocks.
 
 use std::convert::{TryFrom, TryInto};
-
 use hotstuff_rs::types::Data;
-
 use crate::{cryptography::{PublicAddress, Sha256Hash, BloomFilter, sha256}, serialization::{Serializable, Deserializable}, blockchain::{TransactionV2, ReceiptV2, TransactionV1, ReceiptV1}};
 
 /// Indexes definitions for [hotstuff_rs::types::Block] interoperability.
